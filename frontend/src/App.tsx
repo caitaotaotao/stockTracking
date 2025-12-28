@@ -4,7 +4,7 @@ import StrategyHeader from '../components/StrategyHeader';
 import StockList from '../components/StockList';
 import StockDetail from '../components/StockDetail';
 import StrategyReturnModal from '../components/StrategyReturnModal';
-import { fetchStrategies, fetchStocksByStrategy } from './services/api';
+import { fetchStrategies, fetchStocksByStrategy } from '../services/api';
 import type { Strategy, Stock } from './types';
 
 const App: React.FC = () => {
