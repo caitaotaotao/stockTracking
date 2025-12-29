@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from typing import List
 
 from .models import (
-    Strategy,
+    Strategy, Stocks
 )
 from .services import StrategyService
 
@@ -15,10 +15,10 @@ async def list_strategies():
     """获取所有策略列表"""
     return StrategyService.get_all_strategies()
 
-@strategy_router.get("/{strategy_id}", response_model=Strategy)
-async def get_strategy(strategy_id: int):
+@strategy_router.post("/getStrategyResults", response_model=Stocks)
+async def get_strategy(strategy_id: int, report_date: str):
     """获取特定策略详情"""
-    strategy = StrategyService.get_strategy_by_id(strategy_id)
-    if not strategy:
-        raise HTTPException(status_code=404, detail="策略不存在")
+    strategy = StrategyService.get_portfolio_by_id(strategy_id, report_date)
+    if len(strategy) == 0:
+        raise HTTPException(status_code=400, detail="策略选股结果不存在")
     return strategy

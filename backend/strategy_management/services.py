@@ -108,6 +108,7 @@ class StrategyService:
                 'latestMV': r.iloc[i]['total_mv'],
                 'change20D': round(float(change_20d_dict.get(original_code)), 2) if original_code in change_20d_dict and change_20d_dict.get(original_code) is not None else None,
                 'signal': r.iloc[i]['signal'],
+                'themes': [],  # 主题数据暂未添加
             }
             result.append(_r)
         return result

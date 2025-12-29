@@ -24,7 +24,10 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (selectedStrategyId) {
-      fetchStocksByStrategy(selectedStrategyId).then((data: Stock[]) => {
+      fetchStocksByStrategy({
+        strategy_id: Number(selectedStrategyId),
+        report_date: '20250930',
+      }).then((data: Stock[]) => {
         setStocks(data);
         if (data.length > 0) setSelectedStock(data[0]);
       });

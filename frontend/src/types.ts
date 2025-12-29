@@ -11,6 +11,8 @@ export interface Stock {
   marketCap: number; // 亿元
   change20d: number; // 百分比
   themes: string[];
+  industry: string;
+  score: number;
 }
 
 export interface KLineData {
