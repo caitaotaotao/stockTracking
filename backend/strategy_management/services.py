@@ -1,7 +1,7 @@
 import pandas as pd
 from typing import List, Optional, Dict
 from backend.strategy_management.models import Strategy
-from backend.databases.databases_connection import SessionLocal
+from backend.databases.databases_connection import Session
 from backend.databases.data_models import StrategyDivquality, BasicInfoStock, StrategyGrowthmomentum, StockIndicators
 from backend.utilities.basic_funcs import stock_market
 from sqlalchemy import func, text
@@ -24,7 +24,7 @@ class StrategyService:
     @staticmethod
     def get_portfolio_by_id(strategy_id: int, report_date: str) -> Optional[Strategy]:
         """根据策略ID和报告日期获取策略组合的股票列表"""
-        with SessionLocal() as session:
+        with Session() as session:
             # 子查询获取最新市值
             latest_mv_subquery = session.query(
                 StockIndicators.code,
@@ -94,7 +94,7 @@ class StrategyService:
                     StrategyGrowthmomentum.end_date == report_date
                 ).order_by(StrategyGrowthmomentum.signal_growth.desc())
             else:
-                return []
+                return [] # type: ignore
 
         r = pd.DataFrame(r)
         r['code'] = r['code'].apply(lambda x: stock_market(x))
@@ -106,12 +106,12 @@ class StrategyService:
                 'shortName': r.iloc[i]['short_name'],
                 'industryName': r.iloc[i]['industry_name'],
                 'latestMV': r.iloc[i]['total_mv'],
-                'change20D': round(float(change_20d_dict.get(original_code)), 2) if original_code in change_20d_dict and change_20d_dict.get(original_code) is not None else None,
+                'change20D': round(float(change_20d_dict.get(original_code)), 2) if original_code in change_20d_dict and change_20d_dict.get(original_code) is not None else None, # type: ignore
                 'signal': r.iloc[i]['signal'],
                 'themes': [],  # 主题数据暂未添加
             }
             result.append(_r)
-        return result
+        return result # type: ignore
     
     @staticmethod
     def get_portfolio_performance(strategy_id: int) -> Optional[Dict]:

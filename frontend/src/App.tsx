@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import StrategyHeader from '../components/StrategyHeader';
 import StockList from '../components/StockList';
@@ -7,7 +7,7 @@ import StrategyReturnModal from '../components/StrategyReturnModal';
 import { fetchStrategies, fetchStocksByStrategy } from '../services/api';
 import type { Strategy, Stock } from './types';
 
-const App: React.FC = () => {
+const App = () => {
   const [strategies, setStrategies] = useState<Strategy[]>([]);
   const [selectedStrategyId, setSelectedStrategyId] = useState<string>('');
   const [stocks, setStocks] = useState<Stock[]>([]);
