@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import StrategyHeader from '../components/StrategyHeader';
 import StockList from '../components/StockList';
@@ -54,7 +54,8 @@ const App = () => {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Header - Strategy Filters */}
         <StrategyHeader 
-          strategyName={selectedStrategy?.name || '选择策略'} 
+          strategyName={selectedStrategy?.name || '选择策略'}
+          strategyId={selectedStrategyId}
           onOpenMonitor={() => setIsMonitorOpen(true)}
         />
 
