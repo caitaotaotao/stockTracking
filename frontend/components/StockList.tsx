@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { Stock } from '../src/types';
+import { type ReactElement } from 'react';
+import type { Stock } from '../src/types';
 
 interface StockListProps {
   stocks: Stock[];
@@ -9,7 +9,7 @@ interface StockListProps {
   onAIResearch: (stock: Stock) => void;
 }
 
-const StockList: React.FC<StockListProps> = ({ stocks, selectedSymbol, onSelectStock, onAIResearch }) => {
+const StockList = ({ stocks, selectedSymbol, onSelectStock, onAIResearch }: StockListProps): ReactElement => {
   return (
     <div className="w-80 border-r bg-white h-full flex flex-col overflow-hidden">
       <table className="w-full text-left text-xs border-collapse">
@@ -18,7 +18,7 @@ const StockList: React.FC<StockListProps> = ({ stocks, selectedSymbol, onSelectS
             <th className="px-4 py-3">股票</th>
             <th className="px-2 py-3">总市值(亿)</th>
             <th className="px-2 py-3">近20天涨跌幅</th>
-            <th className="px-2 py-3">AI</th>
+            <th className="px-2 py-3">AI基本面</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100 overflow-y-auto">
@@ -30,7 +30,7 @@ const StockList: React.FC<StockListProps> = ({ stocks, selectedSymbol, onSelectS
             >
               <td className="px-4 py-4">
                 <div className="font-semibold text-gray-900">{stock.name}</div>
-                <div className="text-gray-400">{stock.symbol}</div>
+                <div className="text-gray-400 text-xxs">{stock.symbol}</div>
               </td>
               <td className="px-2 py-4 text-gray-600 font-medium">{stock.marketCap.toFixed(2)}</td>
               <td className={`px-2 py-4 font-bold ${stock.change20d >= 0 ? 'text-red-500' : 'text-green-500'}`}>

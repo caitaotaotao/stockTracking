@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import StrategyHeader from '../components/StrategyHeader';
 import StockList from '../components/StockList';
@@ -43,16 +43,16 @@ const App = () => {
 
   return (
     <div className="flex h-screen bg-gray-100 text-gray-900 overflow-hidden">
-      {/* Sidebar - Strategy Selector */}
+      {/* 策略面板 */}
       <Sidebar 
         strategies={strategies} 
         selectedId={selectedStrategyId} 
         onSelect={setSelectedStrategyId} 
       />
 
-      {/* Main Content Area */}
+      {/* 详情面板 */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top Header - Strategy Filters */}
+        {/* 策略头部区域 */}
         <StrategyHeader 
           strategyName={selectedStrategy?.name || '选择策略'}
           strategyId={selectedStrategyId}

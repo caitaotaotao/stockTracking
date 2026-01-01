@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { Strategy } from '../src/types';
+import { type ReactElement } from 'react';
+import type { Strategy } from '../src/types';
 
 interface SidebarProps {
   strategies: Strategy[];
@@ -8,7 +8,7 @@ interface SidebarProps {
   onSelect: (id: string) => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ strategies, selectedId, onSelect }) => {
+const Sidebar = ({ strategies, selectedId, onSelect }: SidebarProps): ReactElement => {
   return (
     <div className="w-64 border-r bg-white h-screen flex flex-col">
       <div className="p-6 border-b">
