@@ -2,7 +2,7 @@ import pandas as pd
 from typing import List, Optional, Dict
 from backend.strategy_management.models import Strategy
 from backend.databases.databases_connection import Session, engine
-from backend.databases.data_models import StrategyDivquality, BasicInfoStock, StrategyGrowthmomentum, StockIndicators, TechStrongWatchlist, TechStrongSignals
+from backend.databases.data_models import StrategyDivquality, BasicInfoStock, StrategyGrowthmomentum, StockIndicators, TechStrongWatchlist, TechStrongSignals, MarketPriceDaily
 from backend.utilities.basic_funcs import stock_market
 from sqlalchemy import func, select, text
 
@@ -191,3 +191,40 @@ class StrategyService:
         else:
             filter_options = None
         return filter_options
+
+
+class StockPriceService:
+    """股票价格服务层，处理股票业务逻辑"""
+    @staticmethod
+    def get_historical_prices(stock_code: str) -> Optional[List[Dict]]:
+        """获取股票的历史价格数据"""
+        if len(stock_code) > 6:
+            stock_code = stock_code.split('.')[0]
+        with Session() as session:
+            r = session.query(
+                MarketPriceDaily.trade_date,
+                MarketPriceDaily.open,
+                MarketPriceDaily.close,
+                MarketPriceDaily.high,
+                MarketPriceDaily.low,
+                MarketPriceDaily.volume
+            ).filter(
+                MarketPriceDaily.code == stock_code,
+            ).order_by(MarketPriceDaily.trade_date.asc())
+            r = pd.DataFrame(r)
+            r['trade_date'] = pd.to_datetime(r['trade_date'])
+        if r.empty:
+            return None
+        else:
+            result = []
+            for i in range(len(r)):
+                _r = {
+                    'tradeDate': r.iloc[i]['trade_date'].strftime("%Y-%m-%d %H:%M:%S"),
+                    'open': r.iloc[i]['open'],
+                    'close': r.iloc[i]['close'],
+                    'high': r.iloc[i]['high'],
+                    'low': r.iloc[i]['low'],
+                    'volume': r.iloc[i]['volume'],
+                }
+                result.append(_r)
+        return result

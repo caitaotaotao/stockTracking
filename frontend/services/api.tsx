@@ -67,15 +67,28 @@ export const fetchStocksByStrategy = async (
 // 获取股票K线数据
 export const fetchKLineData = async (
   symbol: string,
-  timeframe: TimeFrame
 ): Promise<KLineData[]> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/stocks/${symbol}/kline?timeframe=${timeframe}`);
+    const response = await fetch(`${API_BASE_URL}/strategies/getStockPrice`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ stock_code: symbol }),
+    });
+    
     if (!response.ok) {
       throw new Error(`获取K线数据请求失败！${response.status}`);
     }
     const data = await response.json();
-    return data;
+    return data.map((item: any) => ({
+      tradeDate: item.tradeDate,
+      open: item.open,
+      close: item.close,
+      high: item.high,
+      low: item.low,
+      volume: item.volume,
+    }));
   } catch (error) {
     console.error('获取K线数据失败：', error);
     return [];

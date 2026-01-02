@@ -59,9 +59,9 @@ const App = () => {
           onOpenMonitor={() => setIsMonitorOpen(true)}
         />
 
-        {/* Content Body */}
+        {/* 详情面板 */}
         <div className="flex-1 flex overflow-hidden">
-          {/* Middle Pane - Stock List */}
+          {/* 左侧股票列表 */}
           <StockList 
             stocks={stocks} 
             selectedSymbol={selectedStock?.symbol || ''} 
@@ -69,7 +69,7 @@ const App = () => {
             onAIResearch={handleAIResearch}
           />
 
-          {/* Right Pane - Stock Detail & AI Analysis */}
+          {/* K线及AI分析面板 */}
           <StockDetail 
             stock={selectedStock} 
             aiTriggerKey={aiTriggerKey}
@@ -77,7 +77,7 @@ const App = () => {
         </div>
       </div>
 
-      {/* Strategy Performance Monitor Modal */}
+      {/* 策略回测弹窗 */}
       <StrategyReturnModal 
         isOpen={isMonitorOpen} 
         onClose={() => setIsMonitorOpen(false)} 
