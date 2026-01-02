@@ -86,3 +86,30 @@ class StockIndicators(Base):
     free_share = Column(FLOAT)
     total_mv = Column(FLOAT)
     circ_mv = Column(FLOAT)
+
+
+# 强势股模型
+class TechStrongWatchlist(Base):
+    __tablename__ = 'technicals_strongStocks_watchlist'
+    __table_args__ = {'schema': 'quant_research'}
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    trade_date = Column(Date)
+    ticker = Column(VARCHAR)
+    board = Column(VARCHAR)
+    score = Column(FLOAT)
+
+    def __repr__(self):
+        return "<TechStrongWatchlist(name=technicals_strongStocks_watchlist, comment= 技术流派-强势股观察名单)>"
+
+
+class TechStrongSignals(Base):
+    __tablename__ = 'technicals_strongStocks_signals'
+    __table_args__ = {'schema': 'quant_research'}
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    trade_date = Column(Date)
+    ticker = Column(VARCHAR)
+    board = Column(VARCHAR)
+    score = Column(FLOAT)
+
+    def __repr__(self):
+        return "<TechStrongWatchlist(name=technicals_strongStocks_watchlist, comment= 技术流派-强势股观察名单)>"
