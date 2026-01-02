@@ -16,9 +16,9 @@ async def list_strategies():
     return StrategyService.get_all_strategies()
 
 @strategy_router.post("/getStrategyResults", response_model=Stocks)
-async def get_strategy(strategy_id: int, report_date: str, date_period: int):
+async def get_strategy(strategy_id: int, report_date: str, date_period: int, stage: int):
     """获取特定策略详情"""
-    strategy = StrategyService.get_portfolio_by_id(strategy_id, report_date, date_period)
+    strategy = StrategyService.get_portfolio_by_id(strategy_id, report_date, date_period, stage)
     if strategy is None:
         raise HTTPException(status_code=400, detail="策略选股结果不存在")
     return strategy

@@ -16,7 +16,7 @@ export interface Stock {
 }
 
 export interface KLineData {
-  time: string;
+  tradeDate: string;  // 秒级时间戳
   open: number;
   close: number;
   high: number;

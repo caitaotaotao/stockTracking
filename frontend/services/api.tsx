@@ -1,4 +1,4 @@
-import type { Strategy, Stock } from '../src/types';
+import type { Strategy, Stock, KLineData, TimeFrame  } from '../src/types';
 
 const API_BASE_URL = 'http://localhost:8000'
 
@@ -25,7 +25,9 @@ export const fetchStrategies = async (): Promise<Strategy[]> => {
 // 获取策略选股结果
 interface StrategyParams {
   strategy_id: number;
-  report_date: string;
+  report_date?: string;
+  date_period?: number;
+  stage?: number;
 }
 
 export const fetchStocksByStrategy = async (
@@ -58,6 +60,39 @@ export const fetchStocksByStrategy = async (
     }));
   } catch (error) {
     console.error('获取策略选股结果失败：', error);
+    return [];
+  }
+};
+
+// 获取股票K线数据
+export const fetchKLineData = async (
+  symbol: string,
+  timeframe: TimeFrame
+): Promise<KLineData[]> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/stocks/${symbol}/kline?timeframe=${timeframe}`);
+    if (!response.ok) {
+      throw new Error(`获取K线数据请求失败！${response.status}`);
+    }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('获取K线数据失败：', error);
+    return [];
+  }
+};
+
+// 获取策略回测收益数据
+export const fetchStrategyReturns = async (strategyId: string): Promise<any[]> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/strategies/${strategyId}/returns`);
+    if (!response.ok) {
+      throw new Error(`获取策略回测收益数据请求失败！${response.status}`);
+    }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('获取策略回测收益数据失败：', error);
     return [];
   }
 };

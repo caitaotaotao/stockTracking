@@ -1,68 +1,141 @@
-
-import React, { useEffect, useRef } from 'react';
-import { Stock as G2Stock } from '@antv/g2plot';
-import { KLineData } from '../src/types';
+import { useEffect, useRef } from 'react';
+import { createChart, ColorType, CandlestickSeries,HistogramSeries } from 'lightweight-charts';
+import type { IChartApi, ISeriesApi, CandlestickData } from 'lightweight-charts';
+import type { KLineData } from '../src/types';
+import type { HistogramData, Time } from 'lightweight-charts';
 
 interface KLineChartProps {
   data: KLineData[];
   height?: number;
 }
 
-const KLineChart: React.FC<KLineChartProps> = ({ data, height = 350 }) => {
+const KLineChart = ({ data, height = 350 }: KLineChartProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<G2Stock | null>(null);
+  const chartRef = useRef<IChartApi | null>(null);
+  const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
 
   useEffect(() => {
     if (!containerRef.current || data.length === 0) return;
 
     if (!chartRef.current) {
-      chartRef.current = new G2Stock(containerRef.current, {
-        data,
-        xField: 'time',
-        yField: ['open', 'close', 'high', 'low'],
-        stockStyle: {
-          stroke: '#f0f0f0',
-          lineWidth: 0.5,
+      const chart = createChart(containerRef.current, {
+        width: containerRef.current.clientWidth,
+        height: height,
+        layout: {
+          background: { type: ColorType.Solid, color: 'white' },
+          textColor: '#333',
         },
-        fallingFill: '#22c55e', // Green for fall in some markets, but we use typical Red/Green
-        risingFill: '#ef4444', 
-        tooltip: {
-          showMarkers: false,
-          crosshairs: {
-            type: 'xy',
+        grid: {
+          vertLines: { color: '#f0f0f0' },
+          horzLines: { color: '#f0f0f0' },
+        },
+        crosshair: {
+          mode: 0,
+          vertLine: {
+            width: 1,
+            color: '#758696',
+            style: 3,
+          },
+          horzLine: {
+            width: 1,
+            color: '#758696',
+            style: 3,
           },
         },
-        yAxis: {
-          label: {
-            formatter: (v) => Number(v).toFixed(2),
-          },
-          grid: {
-            line: {
-              style: {
-                stroke: '#f1f5f9',
-                lineDash: [4, 5],
-              },
-            },
-          },
+        timeScale: {
+          borderColor: '#f0f0f0',
+          timeVisible: true,
+          secondsVisible: false,
+        },
+        rightPriceScale: {
+          borderColor: '#f0f0f0',
+        },
+        handleScroll: {
+          vertTouchDrag: false,
         },
       });
-      chartRef.current.render();
-    } else {
-      chartRef.current.changeData(data);
+
+      const candleSeries = chart.addSeries(CandlestickSeries, {
+        upColor: '#ef4444',
+        downColor: '#22c55e',
+        borderUpColor: '#ef4444',
+        borderDownColor: '#22c55e',
+        wickUpColor: '#ef4444',
+        wickDownColor: '#22c55e',
+      });
+
+      const formattedData = data.map(item => ({
+        time: new Date(item.tradeDate).getTime() / 1000,
+        open: item.open,
+        high: item.high,
+        low: item.low,
+        close: item.close,
+      })) as CandlestickData[];
+
+      candleSeries.setData(formattedData);
+
+      const volumeSeries = chart.addSeries(HistogramSeries, {
+        color: '#26a69a',
+        priceFormat: {
+          type: 'volume',
+        },
+        priceScaleId: '', // 使用独立的价格轴
+      });
+
+      chart.priceScale('').applyOptions({
+        scaleMargins: {
+          top: 0.8,
+          bottom: 0,
+        },
+      });
+
+
+      const volumeData: HistogramData<Time>[] = data.map(item => ({
+        time: Math.floor(new Date(item.tradeDate).getTime() / 1000) as Time,  // 要求为毫秒级时间戳
+        value: item.vol,
+        color: item.close > item.open ? '#ef4444' : '#22c55e',
+      }));
+
+      volumeSeries.setData(volumeData);
+
+      const handleResize = () => {
+        if (containerRef.current && chartRef.current) {
+          chartRef.current.applyOptions({ 
+            width: containerRef.current.clientWidth 
+          });
+        }
+      };
+
+      window.addEventListener('resize', handleResize);
+
+      chartRef.current = chart;
+      seriesRef.current = candleSeries;
+
+      chart.timeScale().fitContent();
+
+      return () => {
+        window.removeEventListener('resize', handleResize);
+      };
+    } else if (seriesRef.current) {
+      const formattedData = data.map(item => ({
+        time: new Date(item.tradeDate).getTime() / 1000,
+        open: item.open,
+        high: item.high,
+        low: item.low,
+        close: item.close,
+      })) as CandlestickData[];
+
+      seriesRef.current.setData(formattedData);
+      chartRef.current.timeScale().fitContent();
     }
+  }, [data, height]);
 
-    return () => {
-      // We don't necessarily want to destroy on every data update, 
-      // but if the component unmounts, we should.
-    };
-  }, [data]);
-
-  // Clean up on unmount
   useEffect(() => {
     return () => {
       if (chartRef.current) {
-        chartRef.current.destroy();
+        chartRef.current.remove();
         chartRef.current = null;
+        seriesRef.current = null;
       }
     };
   }, []);

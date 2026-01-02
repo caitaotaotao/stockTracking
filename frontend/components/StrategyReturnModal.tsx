@@ -1,24 +1,27 @@
-
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Line } from '@antv/g2plot';
+import { Modal, Typography, Row, Col, Card, Statistic } from 'antd';
 import { fetchStrategyReturns } from '../services/api';
+
+const { Title, Text } = Typography;
 
 interface StrategyReturnModalProps {
   isOpen: boolean;
   onClose: () => void;
   strategyName: string;
+  strategyId: string;
 }
 
-const StrategyReturnModal: React.FC<StrategyReturnModalProps> = ({ isOpen, onClose, strategyName }) => {
+const StrategyReturnModal = ({ isOpen, onClose, strategyName, strategyId }: StrategyReturnModalProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<Line | null>(null);
   const [data, setData] = useState<any[]>([]);
 
   useEffect(() => {
     if (isOpen) {
-      fetchStrategyReturns().then((res: any) => setData(res));
+      fetchStrategyReturns(strategyId).then((res: any) => setData(res));
     }
-  }, [isOpen]);
+  }, [isOpen, strategyId]);
 
   useEffect(() => {
     if (!containerRef.current || data.length === 0 || !isOpen) return;
@@ -65,54 +68,81 @@ const StrategyReturnModal: React.FC<StrategyReturnModalProps> = ({ isOpen, onClo
     };
   }, []);
 
-  if (!isOpen) return null;
+  // 统计卡片数据
+  const statisticsData = [
+    { label: '年化收益', value: '+32.45%', valueStyle: { color: '#f43f5e' } },
+    { label: '最大回撤', value: '-12.80%', valueStyle: { color: '#10b981' } },
+    { label: '夏普比率', value: '1.85', valueStyle: { color: '#4f46e5' } },
+    { label: '胜率', value: '62.5%', valueStyle: { color: '#3b82f6' } }
+  ];
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div 
-        className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" 
-        onClick={onClose}
-      />
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl p-8 relative z-10 animate-in fade-in zoom-in duration-300">
-        <button 
-          onClick={onClose}
-          className="absolute top-6 right-6 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-all"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-
-        <header className="mb-8">
-          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">{strategyName} - 策略监控详情</h2>
-          <p className="text-slate-500 mt-1">实时回测与基准收益对照 (最近60个交易日)</p>
-        </header>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {[
-            { label: '年化收益', value: '+32.45%', color: 'text-rose-500', bg: 'bg-rose-50' },
-            { label: '最大回撤', value: '-12.80%', color: 'text-emerald-500', bg: 'bg-emerald-50' },
-            { label: '夏普比率', value: '1.85', color: 'text-indigo-600', bg: 'bg-indigo-50' },
-            { label: '胜率', value: '62.5%', color: 'text-blue-600', bg: 'bg-blue-50' }
-          ].map((item, idx) => (
-            <div key={idx} className={`${item.bg} p-5 rounded-xl border border-white shadow-sm`}>
-              <div className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-2">{item.label}</div>
-              <div className={`text-2xl font-black ${item.color}`}>{item.value}</div>
-            </div>
-          ))}
+    <Modal
+      open={isOpen}
+      onCancel={onClose}
+      footer={null}
+      width={1000}
+      centered
+      className="strategy-return-modal"
+      title={
+        <div>
+          <Title level={4} style={{ margin: 0 }}>
+            {strategyName} - 策略监控详情
+          </Title>
+          <Text type="secondary">实时回测与基准收益对照 (最近60个交易日)</Text>
         </div>
+      }
+    >
+      <Row gutter={[16, 16]}>
+        {statisticsData.map((item, idx) => (
+          <Col xs={24} sm={12} lg={6} key={idx}>
+            <Card 
+              style={{ 
+                background: idx === 0 ? '#fff1f2' : 
+                           idx === 1 ? '#ecfdf5' : 
+                           idx === 2 ? '#eef2ff' : '#eff6ff',
+                borderRadius: '12px'
+              }}
+            >
+              <Statistic 
+                title={<Text style={{ fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', color: '#64748b' }}>{item.label}</Text>}
+                value={item.value}
+              />
+            </Card>
+          </Col>
+        ))}
+      </Row>
 
-        <div className="h-[400px] w-full bg-slate-50/50 rounded-xl p-4 border border-slate-100" ref={containerRef}></div>
-        
-        <footer className="mt-6 flex justify-between items-center text-xs text-slate-400">
-          <div>* 历史收益不代表未来表现</div>
-          <div className="flex items-center">
-            <span className="w-3 h-3 bg-indigo-600 rounded-full mr-1"></span> 本策略
-            <span className="w-3 h-3 bg-slate-400 rounded-full ml-4 mr-1"></span> 基准指数
-          </div>
-        </footer>
+      <div 
+        ref={containerRef} 
+        style={{ 
+          height: '400px', 
+          width: '100%', 
+          marginTop: '20px', 
+          padding: '16px',
+          background: 'rgba(248, 250, 252, 0.5)', 
+          borderRadius: '12px',
+          border: '1px solid #f1f5f9'
+        }}
+      />
+      
+      <div style={{ 
+        marginTop: '24px', 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        fontSize: '12px',
+        color: '#94a3b8'
+      }}>
+        <div>* 历史收益不代表未来表现</div>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#4f46e5', marginRight: '4px' }}></span>
+          <span style={{ marginRight: '16px' }}>本策略</span>
+          <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#94a3b8', marginRight: '4px' }}></span>
+          <span>基准指数</span>
+        </div>
       </div>
-    </div>
+    </Modal>
   );
 };
 

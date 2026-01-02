@@ -1,26 +1,38 @@
 
-import React, { useState, useEffect } from 'react';
-import { Stock, TimeFrame } from '../src/types';
-import { generateKLineData } from '../constants';
+import { useState, useEffect } from 'react';
+import type { Stock, TimeFrame, KLineData } from '../src/types';
 import KLineChart from './KLineChart';
 import AIAnalysisSection from './AIAnalysisSection';
+import { fetchKLineData } from '../services/api';
+import { Spin } from 'antd';
 
 interface StockDetailProps {
   stock: Stock | null;
   aiTriggerKey: number;
 }
 
-const StockDetail: React.FC<StockDetailProps> = ({ stock, aiTriggerKey }) => {
+const StockDetail = ({ stock, aiTriggerKey }: StockDetailProps) => {
   const [timeframe, setTimeframe] = useState<TimeFrame>('day');
-  const [klineData, setKlineData] = useState(generateKLineData(50));
+  const [klineData, setKlineData] = useState<KLineData[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    // Simulate fetching different timeframe data
-    let count = 50;
-    if (timeframe === 'week') count = 100;
-    if (timeframe === 'month') count = 200;
-    if (timeframe === 'year') count = 250;
-    setKlineData(generateKLineData(count));
+    // 只有当有选中的股票时才获取数据
+    if (!stock) return;
+    
+    const loadKLineData = async () => {
+      setIsLoading(true);
+      try {
+        // 使用API服务获取K线数据
+        const data = await fetchKLineData(stock.symbol, timeframe);
+        setKlineData(data);
+      } catch (error) {
+        console.error('Error fetching K-line data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadKLineData();
   }, [timeframe, stock]);
 
   if (!stock) {
@@ -67,8 +79,15 @@ const StockDetail: React.FC<StockDetailProps> = ({ stock, aiTriggerKey }) => {
         </div>
       </div>
 
-      <div className="border rounded-xl p-4 mb-6 shadow-sm">
-        <KLineChart data={klineData} height={350} />
+      <div className="border rounded-xl p-4 mb-6 shadow-sm relative">
+        <Spin
+          spinning={isLoading}
+          tip="K线数据加载中..."
+          size="large"
+          className="w-full h-full"
+        >
+          <KLineChart data={klineData} height={350} />
+        </Spin>
       </div>
 
       <AIAnalysisSection stock={stock} triggerKey={aiTriggerKey} />

@@ -22,8 +22,9 @@ class StrategyService:
         return stratigies
     
     @staticmethod
-    def get_portfolio_by_id(strategy_id: int, report_date: str="2025-09-30", date_period: int=3) -> Optional[List[Dict]]:
+    def get_portfolio_by_id(strategy_id: int, report_date: str="2025-09-30", date_period: int=3, stage=1) -> Optional[List[Dict]]:
         """根据策略ID和报告日期、交易日区间获取策略组合的股票列表"""
+        assert stage in [1,2]
         with Session() as session:
             # 子查询获取最新市值
             latest_mv_subquery = session.query(
@@ -99,43 +100,40 @@ class StrategyService:
                 r['stage'] = ''
 
             elif strategy_id == 3:  # 强势股跟踪策略
-
-                watchlist_dates_sq = (
-                    select(TechStrongWatchlist.trade_date.label('trade_date'))
-                    .distinct()
-                    .order_by(TechStrongWatchlist.trade_date.desc())
-                    .limit(date_period)
-                    .subquery()
-                )
-                signals_dates_sq = (
-                    select(TechStrongSignals.trade_date.label('trade_date'))
-                    .distinct()
-                    .order_by(TechStrongSignals.trade_date.desc())
-                    .limit(date_period)
-                    .subquery()
-                )
-                r1 = (
-                    select(TechStrongWatchlist.trade_date, TechStrongWatchlist.ticker, TechStrongWatchlist.board, TechStrongWatchlist.score)
-                    .join(watchlist_dates_sq, TechStrongWatchlist.trade_date == watchlist_dates_sq.c.trade_date)
-                    .order_by(TechStrongWatchlist.trade_date.desc(), TechStrongWatchlist.score.desc())
-                )
-
-                r2 = (
-                    select(TechStrongSignals.trade_date, TechStrongSignals.ticker, TechStrongSignals.board, TechStrongSignals.score)
-                    .join(signals_dates_sq, TechStrongSignals.trade_date == signals_dates_sq.c.trade_date)
-                    .order_by(TechStrongSignals.trade_date.desc(), TechStrongSignals.score.desc())
-                )
-
-                df1 = pd.DataFrame(session.execute(r1).scalars().all())
-                df1['stage'] = 'watchlist'
-                df2 = pd.DataFrame(session.execute(r2).scalars().all())
-                df2['stage'] = 'signals'
-                r = pd.concat([df1, df2], ignore_index=True)
-                r.reset_index(drop=True, inplace=True)
+                if stage == 1:
+                    watchlist_dates_sq = (
+                        select(TechStrongWatchlist.trade_date.label('trade_date'))
+                        .distinct()
+                        .order_by(TechStrongWatchlist.trade_date.desc())
+                        .limit(date_period)
+                        .subquery()
+                    )
+                    r1 = (
+                        select(TechStrongWatchlist.trade_date, TechStrongWatchlist.ticker, TechStrongWatchlist.board, TechStrongWatchlist.score)
+                        .join(watchlist_dates_sq, TechStrongWatchlist.trade_date == watchlist_dates_sq.c.trade_date)
+                        .order_by(TechStrongWatchlist.trade_date.desc(), TechStrongWatchlist.score.desc())
+                    )
+                    r = pd.DataFrame(session.execute(r1).scalars().all())
+                elif stage == 2:
+                    signals_dates_sq = (
+                        select(TechStrongSignals.trade_date.label('trade_date'))
+                        .distinct()
+                        .order_by(TechStrongSignals.trade_date.desc())
+                        .limit(date_period)
+                        .subquery()
+                    )
+                    r2 = (
+                        select(TechStrongSignals.trade_date, TechStrongSignals.ticker, TechStrongSignals.board, TechStrongSignals.score)
+                        .join(signals_dates_sq, TechStrongSignals.trade_date == signals_dates_sq.c.trade_date)
+                        .order_by(TechStrongSignals.trade_date.desc(), TechStrongSignals.score.desc())
+                    )
+                    r = pd.DataFrame(session.execute(r2).scalars().all())
+                else:
+                    raise ValueError("Invalid stage value. Must be 1 or 2.")
             else:
                 return None # type: ignore
         # 整理查询数据结果
-        
+        r.reset_index(drop=True, inplace=True)
         r['code'] = r['code'].apply(lambda x: stock_market(x))
         result = []
         for i in range(len(r)):
@@ -147,8 +145,7 @@ class StrategyService:
                 'latestMV': r.iloc[i]['total_mv'],
                 'change20D': round(float(change_20d_dict.get(original_code)), 2) if original_code in change_20d_dict and change_20d_dict.get(original_code) is not None else None, # type: ignore
                 'signal': r.iloc[i]['signal'],
-                'themes': [],  # 主题数据暂未添加,
-                'stage': r.iloc[i]['stage'],  # 强势股跟踪策略独有，其余为空字符串
+                'themes': [],  # 主题数据暂未添加
             }
             result.append(_r)
         return result # type: ignore
