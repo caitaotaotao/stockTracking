@@ -1,1 +1,18 @@
-/.vscode
+# PyCharm
+.idea/
+
+# VSCode
+.vscode/
+
+# Python
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# 日志文件
+*.log
+
+# 环境变量
+.env

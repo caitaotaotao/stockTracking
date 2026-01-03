@@ -4,6 +4,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List
 from strategy_management.routes import strategy_router
+from agents.multiagents import agents_router
 from fastapi.middleware.cors import CORSMiddleware
 
 # 创建FastAPI应用
@@ -11,6 +12,7 @@ app = FastAPI(title="每日选股复盘系统", description="提供策略和个�
 
 # 注册路由
 app.include_router(strategy_router)
+app.include_router(agents_router)
 
 @app.get("/")
 async def root():
@@ -19,7 +21,7 @@ async def root():
         "message": "欢迎使用交易策略管理系统",
         "endpoints": {
             "strategies": "/strategies/",
-            "portfolios": "/portfolios/"
+            "agents": "/agents_sse/"
         }
     }
 
