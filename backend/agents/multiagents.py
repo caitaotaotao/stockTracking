@@ -423,7 +423,11 @@ async def multiagents_fundamental(
         reportDate: str,
         request: Request,
 ):
-    report_date = pd.to_datetime(reportDate).date()
+    if reportDate == "":
+        # 非报告期采用最近报告期
+        report_date = datetime.datetime.today().date()
+    else:
+        report_date = pd.to_datetime(reportDate).date()
 
     temp = False
 

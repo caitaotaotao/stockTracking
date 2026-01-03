@@ -1,4 +1,4 @@
-import type { Strategy, Stock, KLineData, TimeFrame  } from '../src/types';
+import type { Strategy, Stock, KLineData  } from '../src/types';
 
 const API_BASE_URL = 'http://localhost:8000'
 

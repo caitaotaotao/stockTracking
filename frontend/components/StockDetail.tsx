@@ -9,9 +9,10 @@ import { Spin } from 'antd';
 interface StockDetailProps {
   stock: Stock | null;
   aiTriggerKey: number;
+  onAnalysisState?: (status: 'idle' | 'analyzing' | 'completed' | 'error', stock: Stock) => void;  // 分析状态回调
 }
 
-const StockDetail = ({ stock, aiTriggerKey }: StockDetailProps) => {
+const StockDetail = ({ stock, aiTriggerKey, onAnalysisState }: StockDetailProps) => {
   const [timeframe, setTimeframe] = useState<TimeFrame>('day');
   const [klineData, setKlineData] = useState<KLineData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -90,7 +91,7 @@ const StockDetail = ({ stock, aiTriggerKey }: StockDetailProps) => {
         </Spin>
       </div>
 
-      <AIAnalysisSection stock={stock} triggerKey={aiTriggerKey} />
+      <AIAnalysisSection stock={stock} triggerKey={aiTriggerKey} report_date='2025-09-30' onAnalysisState={onAnalysisState} />
     </div>
   );
 };
