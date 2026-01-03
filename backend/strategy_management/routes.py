@@ -4,7 +4,7 @@ from typing import List
 from .models import (
     Strategy, Stocks
 )
-from .services import StrategyService
+from .services import StrategyService, StockPriceService
 
 # 创建路由器
 strategy_router = APIRouter(prefix="/strategies", tags=["strategies"])
@@ -30,3 +30,11 @@ async def get_strategy_filters(strategy_id: int) -> List[dict]:
     if filter_options is None:
         raise HTTPException(status_code=400, detail="策略筛选条件不存在")
     return filter_options
+
+@strategy_router.post("/getStockPrice", response_model=List[dict])
+async def get_stock_price(stock_code: str):
+    """获取股票的最新价格"""
+    price = StockPriceService.get_historical_prices(stock_code)
+    if price is None:
+        raise HTTPException(status_code=400, detail="股票价格不存在")
+    return price

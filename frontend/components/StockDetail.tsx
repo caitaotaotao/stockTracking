@@ -24,7 +24,7 @@ const StockDetail = ({ stock, aiTriggerKey }: StockDetailProps) => {
       setIsLoading(true);
       try {
         // 使用API服务获取K线数据
-        const data = await fetchKLineData(stock.symbol, timeframe);
+        const data = await fetchKLineData(stock.symbol);
         setKlineData(data);
       } catch (error) {
         console.error('Error fetching K-line data:', error);
