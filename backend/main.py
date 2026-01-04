@@ -6,6 +6,7 @@ from typing import List
 from strategy_management.routes import strategy_router
 from agents.multiagents import agents_router
 from fastapi.middleware.cors import CORSMiddleware
+import os
 
 # 创建FastAPI应用
 app = FastAPI(title="每日选股复盘系统", description="提供策略和个股研究的管理功能")
@@ -36,7 +37,7 @@ origins = [
 # 添加CORS中间件
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,  # 允许的源列表
+    allow_origins=["*"],  # 允许的源列表
     allow_credentials=True,  # 允许cookies
     allow_methods=["*"],    # 允许所有方法
     allow_headers=["*"],    # 允许所有头信息
@@ -44,4 +45,5 @@ app.add_middleware(
 
 
 if __name__ == '__main__':
+    print(os.getcwd())
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True, log_level='debug')

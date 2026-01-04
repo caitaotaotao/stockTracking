@@ -24,7 +24,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler("./logs/fundamental_agents.txt", mode="a", encoding="utf-8"),
+        logging.FileHandler(r"D:\logs\stock_tracking.txt", mode="a", encoding="utf-8"),
         logging.StreamHandler()  # 控制台输出
     ],
 )

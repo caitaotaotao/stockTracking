@@ -1,14 +1,15 @@
 import { useState, useEffect, type ReactElement } from 'react';
+import { useFilter } from '../src/FilterContext';
 
-type FilterOption={
+type FilterOption = {
   name: string;
   value: string | number;
-  type: 'select' | 'multiSelect' | 'number' | 'text';  // 定义筛选项类型
+  type: 'select' | 'multiSelect' | 'number' | 'text';
   options?: Array<{label: string, value: string | number}>;
   defaultValue?: string | number;
 }
 
-type StrategyHeaderProps={
+type StrategyHeaderProps = {
   strategyName: string;
   strategyId: string | number;
   onOpenMonitor: () => void;
@@ -21,7 +22,7 @@ const StrategyHeader = ({
 }: StrategyHeaderProps): ReactElement => {
   
   const [filterOptions, setFilterOptions] = useState<FilterOption[]>([]);
-  const [filterValues, setFilterValues] = useState<Record<string, any>>({});
+  const { filterValues, setFilterValue } = useFilter();
   
   useEffect(() => {
     // 从后端获取筛选项
@@ -31,14 +32,16 @@ const StrategyHeader = ({
         const data = await response.json();
         setFilterOptions(data.filters || []);
         
-        // 遍历配置筛选初始值
-        const initialValues: Record<string, any> = {};
+        // 设置初始值到 Context
         data.filters.forEach((filter: FilterOption) => {
-          initialValues[filter.name] = filter.defaultValue;
+          if (filter.defaultValue !== undefined) {
+            setFilterValue(filter.name, filter.defaultValue);
+          }
         });
-        setFilterValues(initialValues);
       } catch (error) {
         console.error('获取筛选项失败:', error);
+        // 如果获取失败，设置默认筛选项
+        setDefaultFilters();
       }
     };
     
@@ -47,28 +50,26 @@ const StrategyHeader = ({
     }
   }, [strategyId]);
   
+  // 设置默认筛选项
+  const setDefaultFilters = () => {
+    setFilterValue('报告期', '2025-09-30');
+    setFilterValue('date_period', 3);
+    setFilterValue('stage', 1);
+  };
+
   const handleFilterChange = (name: string, value: any) => {
-    setFilterValues(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };  // 筛选项更新函数
+    setFilterValue(name, value);
+  };
 
   const handleMultiSelectChange = (name: string, value: string | number, checked: boolean) => {
-    setFilterValues(prev => {
-      const currentValues = Array.isArray(prev[name]) ? prev[name] : [];
-      // 如果选中，添加到数组；如果取消选中，从数组中移除
-      let newValues;
-      if (checked) {
-        newValues = [...currentValues, value];
-      } else {
-        newValues = currentValues.filter(v => v !== value);
-      }
-      return {
-        ...prev,
-        [name]: newValues
-      };
-    });
+    const currentValues = Array.isArray(filterValues[name]) ? filterValues[name] : [];
+    let newValues;
+    if (checked) {
+      newValues = [...currentValues, value];
+    } else {
+      newValues = currentValues.filter(v => v !== value);
+    }
+    setFilterValue(name, newValues);
   };
   
   const renderFilterOption = (option: FilterOption) => {
@@ -77,7 +78,7 @@ const StrategyHeader = ({
         return (
           <select 
             className="bg-gray-50 border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            value={filterValues[option.name] || ''}
+            value={filterValues[option.name] || option.defaultValue || ''}
             onChange={(e) => handleFilterChange(option.name, e.target.value)}
           >
             {option.options?.map(opt => (
@@ -89,7 +90,6 @@ const StrategyHeader = ({
         return (
           <div className="flex flex-col bg-gray-50 border border-gray-200 rounded p-2 max-h-32 overflow-y-auto">
             {option.options?.map(opt => {
-              // 检查当前选项是否被选中
               const values = Array.isArray(filterValues[option.name]) ? filterValues[option.name] : [];
               const isChecked = values.includes(opt.value);
               return (
@@ -110,8 +110,8 @@ const StrategyHeader = ({
         return (
           <input 
             type="number" 
-            value={filterValues[option.name] || ''}
-            onChange={(e) => handleFilterChange(option.name, e.target.value)}
+            value={filterValues[option.name] ?? option.defaultValue ?? ''}
+            onChange={(e) => handleFilterChange(option.name, Number(e.target.value))}
             className="w-16 bg-gray-50 border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         );
@@ -119,7 +119,7 @@ const StrategyHeader = ({
         return (
           <input 
             type="text" 
-            value={filterValues[option.name] || ''}
+            value={filterValues[option.name] ?? option.defaultValue ?? ''}
             onChange={(e) => handleFilterChange(option.name, e.target.value)}
             className="bg-gray-50 border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
@@ -128,6 +128,7 @@ const StrategyHeader = ({
         return null;
     }
   };
+
   return (
     <div className="bg-white border-b px-6 py-4 flex items-center justify-between shadow-sm">
       <div className="flex items-center space-x-8">
@@ -139,28 +140,6 @@ const StrategyHeader = ({
               {renderFilterOption(option)}
             </div>
           ))}
-          
-          {/* 如果后端还没返回数据，显示占位筛选项 */}
-          {filterOptions.length === 0 && (
-            <>
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-500">报告期:</span>
-                <select className="bg-gray-50 border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                  <option>2025-09-30</option>
-                  <option>2025-06-30</option>
-                  <option>2024-12-31</option>
-                </select>
-              </div>
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-500">总市值{'>='}</span>
-                <input 
-                  type="number" 
-                  defaultValue={30} 
-                  className="w-16 bg-gray-50 border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-            </>
-          )}
         </div>
       </div>
       

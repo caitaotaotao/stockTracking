@@ -1,6 +1,8 @@
-
 import { type ReactElement } from 'react';
+import { Layout, Menu } from 'antd';
 import type { Strategy } from '../src/types';
+
+const { Sider } = Layout;
 
 interface SidebarProps {
   strategies: Strategy[];
@@ -9,32 +11,36 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ strategies, selectedId, onSelect }: SidebarProps): ReactElement => {
+  const menuItems = strategies.map((strategy) => ({
+    key: strategy.id,
+    label: strategy.name,
+  }));
+
+  const handleMenuClick = (e: { key: string }) => {
+    onSelect(e.key);
+  };
+
   return (
-    <div className="w-64 border-r bg-white h-screen flex flex-col">
-      <div className="p-6 border-b">
-        <h1 className="text-xl font-bold text-gray-800">策略面板</h1>
+    <Sider
+      width={250}
+      className="bg-gray-50"
+      collapsedWidth={0}
+      style={{ background: '#fafafa' }}
+    >
+      <div className="py-5 border-b border-gray-200 bg-white">
+        <h3 className="text-lg font-semibold text-gray-900">策略面板</h3>
       </div>
-      <div className="flex-1 overflow-y-auto py-4">
-        {strategies.map((s) => (
-          <div
-            key={s.id}
-            onClick={() => onSelect(s.id)}
-            className={`px-6 py-4 cursor-pointer transition-colors flex items-center justify-between ${
-              selectedId === s.id
-                ? 'bg-indigo-50 text-indigo-700 border-r-4 border-indigo-600'
-                : 'text-gray-600 hover:bg-gray-50'
-            }`}
-          >
-            <span className="font-medium">{s.name}</span>
-            {selectedId === s.id && (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            )}
-          </div>
-        ))}
+      <div className="px-4 py-2">
+        <Menu
+          mode="inline"
+          selectedKeys={[selectedId]}
+          items={menuItems}
+          onClick={handleMenuClick}
+          className="border-0 bg-transparent"
+          style={{ background: 'transparent' }}
+        />
       </div>
-    </div>
+    </Sider>
   );
 };
 
