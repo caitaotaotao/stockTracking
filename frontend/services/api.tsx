@@ -1,4 +1,5 @@
 import type { Strategy, Stock, KLineData  } from '../src/types';
+import type { FilterOption } from '../src/FilterContext';
 
 const API_BASE_URL = 'http://localhost:8000'
 
@@ -109,3 +110,27 @@ export const fetchStrategyReturns = async (strategyId: string): Promise<any[]> =
     return [];
   }
 };
+
+/**
+ * 筛选项配置
+ */
+
+export const fetchStrategyFilters = async (strategyId: number): Promise<FilterOption[]> => {
+  const response = await fetch(`${API_BASE_URL}/strategies/getStrategyFilters`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      "strategyId": strategyId
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  const data: FilterOption[] = await response.json();
+  return data;
+};
+

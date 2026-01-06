@@ -27,11 +27,20 @@ class StrategyService:
         assert stage in [1,2]
         with Session() as session:
             # 子查询获取最新市值
+            lastest_date_subquery = session.query(
+                StockIndicators.code,
+                func.max(StockIndicators.trade_date).label('latest_date')
+            ).group_by(StockIndicators.code).subquery()
+            
             latest_mv_subquery = session.query(
                 StockIndicators.code,
                 StockIndicators.total_mv,
-                func.max(StockIndicators.trade_date).label('latest_date')
-            ).group_by(StockIndicators.code).subquery()
+            ).join(
+                lastest_date_subquery,
+                (StockIndicators.code == lastest_date_subquery.c.code) &
+                (StockIndicators.trade_date == lastest_date_subquery.c.latest_date)
+            ).subquery()
+            
             # 计算个股近20日涨跌幅
             change_20d_subquery = text("""
                 with price_data as (
@@ -95,7 +104,7 @@ class StrategyService:
                     isouter=True
                 ).filter(
                     StrategyGrowthmomentum.end_date == report_date
-                ).order_by(StrategyGrowthmomentum.signal_growth.desc())
+                ).order_by(StrategyGrowthmomentum.signal_growth.desc()).all()
                 r = pd.DataFrame(r)
                 r['stage'] = ''
 

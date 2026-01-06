@@ -1,17 +1,11 @@
 import { useState, useEffect, type ReactElement } from 'react';
 import { useFilter } from '../src/FilterContext';
-
-type FilterOption = {
-  name: string;
-  value: string | number;
-  type: 'select' | 'multiSelect' | 'number' | 'text';
-  options?: Array<{label: string, value: string | number}>;
-  defaultValue?: string | number;
-}
+import type { FilterOption } from '../src/FilterContext';
+import { fetchStrategyFilters } from '../services/api';
 
 type StrategyHeaderProps = {
   strategyName: string;
-  strategyId: string | number;
+  strategyId: number;
   onOpenMonitor: () => void;
 }
 
@@ -21,42 +15,57 @@ const StrategyHeader = ({
   onOpenMonitor
 }: StrategyHeaderProps): ReactElement => {
   
-  const [filterOptions, setFilterOptions] = useState<FilterOption[]>([]);
+  const { filterOptions, initializeFilters, setFilterOptions } = useFilter();
   const { filterValues, setFilterValue } = useFilter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   useEffect(() => {
-    // 从后端获取筛选项
-    const fetchFilterOptions = async () => {
-      try {
-        const response = await fetch(`/api/strategies/${strategyId}/filters`);
-        const data = await response.json();
-        setFilterOptions(data.filters || []);
+      const fetchFilterOptions = async () => {
+        setIsLoading(true);
+        setError(null);
         
-        // 设置初始值到 Context
-        data.filters.forEach((filter: FilterOption) => {
-          if (filter.defaultValue !== undefined) {
-            setFilterValue(filter.name, filter.defaultValue);
-          }
-        });
-      } catch (error) {
-        console.error('获取筛选项失败:', error);
-        // 如果获取失败，设置默认筛选项
-        setDefaultFilters();
-      }
-    };
-    
-    if (strategyId) {
-      fetchFilterOptions();
-    }
-  }, [strategyId]);
-  
-  // 设置默认筛选项
-  const setDefaultFilters = () => {
-    setFilterValue('报告期', '2025-09-30');
-    setFilterValue('date_period', 3);
-    setFilterValue('stage', 1);
-  };
+        try {
+          const filters = await fetchStrategyFilters(strategyId);
+          // 使用 initializeFilters 一次性设置选项和默认值
+          initializeFilters(filters);
+        } catch (error) {
+          console.error('获取筛选项失败:', error);
+          setError('加载筛选项失败');
+          
+          // 设置后备默认值
+          const fallbackFilters: FilterOption[] = [
+            {
+              name: '报告期',
+              value: '2025-09-30',
+              type: 'select',
+              options: [],
+              defaultValue: '2025-09-30'
+            },
+            {
+              name: 'date_period',
+              value: 3,
+              type: 'number',
+              options: [],
+              defaultValue: 3
+            },
+            {
+              name: 'stage',
+              value: 1,
+              type: 'select',
+              options: [],
+              defaultValue: 1
+            }
+          ];
+          initializeFilters(fallbackFilters);
+        } finally {
+          setIsLoading(false);
+        }
+      };
 
+      fetchFilterOptions();
+    }, [strategyId, initializeFilters]);
+  
   const handleFilterChange = (name: string, value: any) => {
     setFilterValue(name, value);
   };
@@ -134,7 +143,7 @@ const StrategyHeader = ({
       <div className="flex items-center space-x-8">
         <h2 className="text-lg font-bold text-gray-800">{strategyName}</h2>
         <div className="flex items-center space-x-4">
-          {filterOptions.map((option, index) => (
+          {filterOptions?.map((option, index) => (
             <div key={index} className="flex items-center space-x-2">
               <span className="text-sm text-gray-500">{option.name}:</span>
               {renderFilterOption(option)}
