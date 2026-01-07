@@ -39,3 +39,11 @@ async def get_stock_price(stock_code: str):
     if price is None:
         raise HTTPException(status_code=400, detail="股票价格不存在")
     return price
+
+@strategy_router.get("/strategyAggregation", response_model=List[dict])
+async def get_strategy_aggregation():
+    """获取策略的聚合结果"""
+    aggregation = StrategyService.strategy_aggregation()
+    if aggregation is None:
+        raise HTTPException(status_code=400, detail="策略聚合结果不存在")
+    return aggregation

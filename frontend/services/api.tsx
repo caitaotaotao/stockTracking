@@ -97,7 +97,7 @@ export const fetchKLineData = async (
 };
 
 // 获取策略回测收益数据
-export const fetchStrategyReturns = async (strategyId: string): Promise<any[]> => {
+export const fetchStrategyReturns = async (strategyId: number): Promise<any[]> => {
   try {
     const response = await fetch(`${API_BASE_URL}/strategies/${strategyId}/returns`);
     if (!response.ok) {

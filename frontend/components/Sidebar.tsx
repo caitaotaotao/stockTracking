@@ -6,8 +6,8 @@ const { Sider } = Layout;
 
 interface SidebarProps {
   strategies: Strategy[];
-  selectedId: string;
-  onSelect: (id: string) => void;
+  selectedId: number;
+  onSelect: (id: number) => void;
 }
 
 const Sidebar = ({ strategies, selectedId, onSelect }: SidebarProps): ReactElement => {
@@ -16,8 +16,8 @@ const Sidebar = ({ strategies, selectedId, onSelect }: SidebarProps): ReactEleme
     label: strategy.name,
   }));
 
-  const handleMenuClick = (e: { key: string }) => {
-    onSelect(e.key);
+  const handleMenuClick = (e: { key:string }) => {
+    onSelect(Number(e.key));
   };
 
   return (
@@ -33,7 +33,7 @@ const Sidebar = ({ strategies, selectedId, onSelect }: SidebarProps): ReactEleme
       <div className="px-4 py-2">
         <Menu
           mode="inline"
-          selectedKeys={[selectedId]}
+          selectedKeys={[String(selectedId)]}
           items={menuItems}
           onClick={handleMenuClick}
           className="border-0 bg-transparent"

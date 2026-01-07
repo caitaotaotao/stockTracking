@@ -11,7 +11,7 @@ import { Layout } from 'antd';
 
 const App = () => {
   const [strategies, setStrategies] = useState<Strategy[]>([]);
-  const [selectedStrategyId, setSelectedStrategyId] = useState<string>('');
+  const [selectedStrategyId, setSelectedStrategyId] = useState<number>(0);
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
   const [isMonitorOpen, setIsMonitorOpen] = useState(false);

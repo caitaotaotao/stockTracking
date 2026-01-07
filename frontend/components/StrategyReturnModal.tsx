@@ -9,7 +9,7 @@ interface StrategyReturnModalProps {
   isOpen: boolean;
   onClose: () => void;
   strategyName: string;
-  strategyId: string;
+  strategyId: number;
 }
 
 const StrategyReturnModal = ({ isOpen, onClose, strategyName, strategyId }: StrategyReturnModalProps) => {

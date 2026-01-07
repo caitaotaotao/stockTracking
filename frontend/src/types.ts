@@ -1,6 +1,6 @@
 
 export interface Strategy {
-  id: string;
+  id: number;
   name: string;
   description: string;
 }

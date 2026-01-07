@@ -1,4 +1,5 @@
 import pandas as pd
+import concurrent.futures
 from typing import List, Optional, Dict
 from strategy_management.models import Strategy
 from databases.databases_connection import Session, engine
@@ -200,6 +201,187 @@ class StrategyService:
         else:
             filter_options = None
         return filter_options
+    
+    @staticmethod
+    def strategy_aggregation():
+        """策略聚合接口"""
+        
+        with Session() as session:
+            dates_momentum = session.query(StrategyGrowthmomentum.end_date).distinct().order_by(StrategyGrowthmomentum.end_date.desc()).all()
+            dates_divquality = session.query(StrategyDivquality.end_date).distinct().order_by(StrategyDivquality.end_date.desc()).all()
+        
+        date_momentum_options = [{"label": date[0].strftime("%Y-%m-%d"), "value": date[0].strftime("%Y-%m-%d")} for date in dates_momentum]
+        date_divquality_options = [{"label": date[0].strftime("%Y-%m-%d"), "value": date[0].strftime("%Y-%m-%d")} for date in dates_divquality]
+
+        # 定义查询函数
+        def query_growth_momentum():
+            sql = """
+                with latest_mv as (
+                    select code, trade_date, total_mv
+                    from quant_research.indicator_daily
+                    where trade_date = (
+                        select MAX(trade_date)
+                        from quant_research.indicator_daily
+                    )
+                )
+                SELECT a.code, b.short_name, a.end_date, a.industry_code as industry_name, a.signal_growth as score, c.total_mv
+                FROM quant_research.strategy_growth_momentum as a
+                left join quant_research.basic_info_stock as b on a.code = b.ticker
+                left join latest_mv as c on a.code = c.code
+                WHERE a.end_date = (
+                    SELECT MAX(end_date)
+                    FROM quant_research.strategy_growth_momentum
+                )
+                ORDER BY a.signal_growth desc;
+            """
+            return pd.read_sql(sql, engine)
+            
+        def query_divquality():
+            sql = """
+                with latest_mv as (
+                        select code, trade_date, total_mv
+                        from quant_research.indicator_daily
+                        where trade_date = (
+                            select MAX(trade_date)
+                            from quant_research.indicator_daily
+                        )
+                )
+                SELECT a.code, b.short_name, a.end_date, a.industry_name, a.signal as score, c.total_mv
+                FROM quant_research.strategy_divquality as a
+                left join quant_research.basic_info_stock as b on a.code = b.ticker
+                left join latest_mv as c on a.code = c.code
+                WHERE a.end_date = (
+                    SELECT MAX(end_date)
+                    FROM quant_research.strategy_divquality
+                )
+                ORDER BY a.signal desc;
+            """
+            return pd.read_sql(sql, engine)
+        
+        def query_strong_watchlist():
+            sql = """
+                with sw_contituent as (
+                            select l1_name, ts_code
+                            from (
+                                select *, row_number() over (PARTITION BY ts_code order by in_date DESC) AS rn
+                                from quant_research.sw_industry_constituent
+                            ) as ranked
+                            where rn=1
+                        ),
+                    latest_mv as (
+                        select code, trade_date, total_mv
+                        from quant_research.indicator_daily
+                        where trade_date = (
+                            select MAX(trade_date)
+                            from quant_research.indicator_daily
+                        )
+                    )
+                SELECT a.ticker as code, b.short_name, a.trade_date, c.l1_name as industry_name, a.score, d.total_mv
+                FROM quant_research."technicals_strongStocks_watchlist" as a
+                left join quant_research.basic_info_stock as b on a.ticker = b.ticker
+                left join sw_contituent as c on a.ticker = c.ts_code
+                left join latest_mv as d on a.ticker = d.code
+                WHERE a.trade_date in (
+                    SELECT trade_date
+                    FROM quant_research."technicals_strongStocks_watchlist"
+                    order BY trade_date DESC LIMIT 3
+                    )
+                ORDER BY a.trade_date desc, a.score desc;
+            """            
+            return pd.read_sql(sql, engine)
+        
+        # 并行执行查询
+        results = {}
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+            future_to_query = {
+                executor.submit(query_growth_momentum): "growth_momentum",
+                executor.submit(query_divquality): "divquality",
+                executor.submit(query_strong_watchlist): "strong_watchlist",
+            }
+            
+            for future in concurrent.futures.as_completed(future_to_query):
+                query_name = future_to_query[future]
+                try:
+                    results[query_name] = future.result()
+                except Exception as exc:
+                    print(f'{query_name} generated an exception: {exc}')
+                    results[query_name] = pd.DataFrame()
+
+        # 处理结果
+        growth_momentum_stocks = []
+        if 'growth_momentum' in results and not results['growth_momentum'].empty:
+            for _, row in results['growth_momentum'].iterrows():
+                growth_momentum_stocks.append({
+                    'code': stock_market(row['code']),
+                    'shortName': row['short_name'],
+                    'industryName': row['industry_name'],
+                    'score': float(row['score']) if row['score'] is not None else None,
+                    'endDate': row['end_date'].strftime("%Y-%m-%d") if hasattr(row['end_date'], 'strftime') else row['end_date'],
+                    'totalMv': float(row['total_mv']) if row['total_mv'] is not None else None
+                })
+        
+        divquality_stocks = []
+        if 'divquality' in results and not results['divquality'].empty:
+            for _, row in results['divquality'].iterrows():
+                divquality_stocks.append({
+                    'code': stock_market(row['code']),
+                    'shortName': row['short_name'],
+                    'industryName': row['industry_name'],
+                    'score': float(row['score']) if row['score'] is not None else None,
+                    'endDate': row['end_date'].strftime("%Y-%m-%d") if hasattr(row['end_date'], 'strftime') else row['end_date'],
+                    'totalMv': float(row['total_mv']) if row['total_mv'] is not None else None
+                })
+        
+        strong_watchlist_stocks = []
+        if 'strong_watchlist' in results and not results['strong_watchlist'].empty:
+            for _, row in results['strong_watchlist'].iterrows():
+                strong_watchlist_stocks.append({
+                    'code': stock_market(row['code']),
+                    'shortName': row['short_name'],
+                    'industryName': row['industry_name'],
+                    'score': float(row['score']) if row['score'] is not None else None,
+                    'tradeDate': row['trade_date'].strftime("%Y-%m-%d") if hasattr(row['trade_date'], 'strftime') else row['trade_date'],
+                    'totalMv': float(row['total_mv']) if row['total_mv'] is not None else None
+                })
+
+        return [
+            {
+                "strategyId": 0,
+                "name": "成长动量策略",
+                "filterOptions": [
+                    {"name": "报告期", "type": "select", "options": date_momentum_options, "defaultValue": date_momentum_options[0]['value'] if date_momentum_options else None},
+                    {"name": "总市值", "type": "number", "options": [], "defaultValue": 30},
+                ],
+                "stockList": growth_momentum_stocks,
+                "stage": "",
+            },
+            {
+                "strategyId": 1,
+                "name": "红利质量策略",
+                "filterOptions": [
+                    {"name": "报告期", "type": "select", "options": date_divquality_options, "defaultValue": date_divquality_options[0]['value'] if date_divquality_options else None},
+                    {"name": "总市值", "type": "number", "options": [], "defaultValue": 30},
+                ],
+                "stockList": divquality_stocks,
+                "stage": "",
+            },
+            {
+                "strategyId": 3,
+                "name": "强势股跟踪",
+                "filterOptions": [
+                    {"name": "信号池", "type": "select", "options": [
+                            {"label": "跟踪池", "value": "1"}, {"label": "触发池", "value": "2"}
+                        ], "defaultValue": "1"},
+                    {"name": "交易日区间", "type": "select", "options": [
+                            {"label": "近3天", "value": 3}, {"label": "近5天", "value": 5}, {"label": "近10天", "value": 10},
+                            {"label": "近20天", "value": 20},
+                        ], "defaultValue": 3},
+                    {"name": "总市值", "type": "number", "options": [], "defaultValue": 30},
+                ],
+                "stockList": strong_watchlist_stocks,
+                "stage": "1",
+            },
+        ]
 
 
 class StockPriceService:
