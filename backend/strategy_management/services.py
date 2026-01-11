@@ -26,6 +26,7 @@ class StrategyService:
     def get_portfolio_by_id(strategy_id: int, report_date: str="2025-09-30", date_period: int=3, stage=1) -> Optional[List[Dict]]:
         """根据策略ID和报告日期、交易日区间获取策略组合的股票列表"""
         assert stage in [1,2]
+        assert date_period in [3,5,10,20]
         with Session() as session:
             # 子查询获取最新市值
             lastest_date_subquery = session.query(
@@ -41,33 +42,6 @@ class StrategyService:
                 (StockIndicators.code == lastest_date_subquery.c.code) &
                 (StockIndicators.trade_date == lastest_date_subquery.c.latest_date)
             ).subquery()
-            
-            # 计算个股近20日涨跌幅
-            change_20d_subquery = text("""
-                with price_data as (
-                    select ticker, close, trade_date,
-                        ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY trade_date DESC) as rn
-                    from quant_research.market_daily_ts
-                ),
-                latest_price as (
-                    select ticker, close as latest_close from price_data where rn = 1
-                ),
-                price_20d_ago as (
-                    select ticker, close as close_20d_ago from price_data where rn = 21
-                )
-                select latest_price.ticker, 
-                    latest_price.latest_close, 
-                    price_20d_ago.close_20d_ago,
-                    case
-                        when price_20d_ago.close_20d_ago>0
-                        then (latest_price.latest_close - price_20d_ago.close_20d_ago) / price_20d_ago.close_20d_ago
-                        else null
-                    end as change_20d
-                from latest_price
-                left join price_20d_ago on latest_price.ticker = price_20d_ago.ticker
-            """)
-            change_20d_df = pd.read_sql(change_20d_subquery, engine)
-            change_20d_dict = dict(zip(change_20d_df['ticker'], change_20d_df['change_20d']))
 
             if strategy_id == 1:  # 红利质量策略
                 r = session.query(
@@ -119,7 +93,12 @@ class StrategyService:
                         .subquery()
                     )
                     r1 = (
-                        select(TechStrongWatchlist.trade_date, TechStrongWatchlist.ticker, TechStrongWatchlist.board, TechStrongWatchlist.score)
+                        select(
+                            TechStrongWatchlist.trade_date, 
+                            TechStrongWatchlist.ticker.label('code'), 
+                            TechStrongWatchlist.board, 
+                            TechStrongWatchlist.score
+                            )
                         .join(watchlist_dates_sq, TechStrongWatchlist.trade_date == watchlist_dates_sq.c.trade_date)
                         .order_by(TechStrongWatchlist.trade_date.desc(), TechStrongWatchlist.score.desc())
                     )
@@ -133,7 +112,12 @@ class StrategyService:
                         .subquery()
                     )
                     r2 = (
-                        select(TechStrongSignals.trade_date, TechStrongSignals.ticker, TechStrongSignals.board, TechStrongSignals.score)
+                        select(
+                            TechStrongSignals.trade_date, 
+                            TechStrongSignals.ticker.label('code'), 
+                            TechStrongSignals.board, 
+                            TechStrongSignals.score
+                            )
                         .join(signals_dates_sq, TechStrongSignals.trade_date == signals_dates_sq.c.trade_date)
                         .order_by(TechStrongSignals.trade_date.desc(), TechStrongSignals.score.desc())
                     )
@@ -153,7 +137,6 @@ class StrategyService:
                 'shortName': r.iloc[i]['short_name'],
                 'industryName': r.iloc[i]['industry_name'],
                 'latestMV': r.iloc[i]['total_mv'],
-                'change20D': round(float(change_20d_dict.get(original_code)), 2) if original_code in change_20d_dict and change_20d_dict.get(original_code) is not None else None, # type: ignore
                 'signal': r.iloc[i]['signal'],
                 'themes': [],  # 主题数据暂未添加
             }
@@ -177,8 +160,8 @@ class StrategyService:
                 date_options = [{"label": date[0].strftime("%Y-%m-%d"), "value": date[0].strftime("%Y-%m-%d")} for date in dates]
 
             filter_options=[
-                {"name": "报告期", "value": "2025-09-30", "type": "select", "options": date_options, "defaultValue": date_options[0]['value'] if date_options else None},
-                {"name": "总市值", "value": "30", "type": "number", "options": [], "defaultValue": 30},
+                {"name": "报告期", "filterCode": "reportDate", "value": "2025-09-30", "type": "select", "options": date_options, "defaultValue": date_options[0]['value'] if date_options else None},
+                {"name": "总市值", "filterCode": "marketCap", "value": "30", "type": "number", "options": [], "defaultValue": 30},
             ]
         elif strategy_id == 1:  # 红利质量策略
             # 获取成长动量的报告期
@@ -187,16 +170,19 @@ class StrategyService:
                 date_options = [{"label": date[0].strftime("%Y-%m-%d"), "value": date[0].strftime("%Y-%m-%d")} for date in dates]
 
             filter_options=[
-                {"name": "报告期", "value": "2025-09-30", "type": "select", "options": date_options, "defaultValue": date_options[0]['value'] if date_options else None},
-                {"name": "总市值", "value": "30", "type": "number", "options": [], "defaultValue": 30},
+                {"name": "报告期", "filterCode": "reportDate", "value": "2025-09-30", "type": "select", "options": date_options, "defaultValue": date_options[0]['value'] if date_options else None},
+                {"name": "总市值", "filterCode": "marketCap", "value": "30", "type": "number", "options": [], "defaultValue": 30},
             ]
         elif strategy_id == 3:  # 强势股跟踪策略
             filter_options=[
-                {"name": "交易日区间", "value": "3", "type": "number", "options": [
+                {"name": "信号池", "filterCode": "stage", "type": "select", "options": [
+                        {"label": "跟踪池", "value": "1"}, {"label": "触发池", "value": "2"}
+                    ], "defaultValue": "1"},
+                {"name": "交易日区间", "filterCode": "datePeriod", "value": "3", "type": "number", "options": [
                     {"label": "近3天", "value": 3}, {"label": "近5天", "value": 5}, {"label": "近10天", "value": 10},
                     {"label": "近20天", "value": 20},
                     ], "defaultValue": 3},
-                {"name": "总市值", "value": "30", "type": "number", "options": [], "defaultValue": 30},
+                {"name": "总市值", "filterCode": "marketCap", "value": "30", "type": "number", "options": [], "defaultValue": 30},
             ]
         else:
             filter_options = None
@@ -224,7 +210,7 @@ class StrategyService:
                         from quant_research.indicator_daily
                     )
                 )
-                SELECT a.code, b.short_name, a.end_date, a.industry_code as industry_name, a.signal_growth as score, c.total_mv
+                SELECT a.code, b.short_name, a.end_date, a.trading, a.industry_code as industry_name, a.signal_growth as score, c.total_mv
                 FROM quant_research.strategy_growth_momentum as a
                 left join quant_research.basic_info_stock as b on a.code = b.ticker
                 left join latest_mv as c on a.code = c.code
@@ -246,7 +232,7 @@ class StrategyService:
                             from quant_research.indicator_daily
                         )
                 )
-                SELECT a.code, b.short_name, a.end_date, a.industry_name, a.signal as score, c.total_mv
+                SELECT a.code, b.short_name, a.end_date, a.trading, a.industry_name, a.signal as score, c.total_mv
                 FROM quant_research.strategy_divquality as a
                 left join quant_research.basic_info_stock as b on a.code = b.ticker
                 left join latest_mv as c on a.code = c.code
@@ -316,10 +302,11 @@ class StrategyService:
                     'shortName': row['short_name'],
                     'industryName': row['industry_name'],
                     'score': float(row['score']) if row['score'] is not None else None,
-                    'endDate': row['end_date'].strftime("%Y-%m-%d") if hasattr(row['end_date'], 'strftime') else row['end_date'],
-                    'totalMv': float(row['total_mv']) if row['total_mv'] is not None else None
+                    'totalMv': float(row['total_mv'])/10000 if row['total_mv'] is not None else None,
+                    'tradeDate': row['trading'].strftime("%Y-%m-%d") if hasattr(row['trading'], 'strftime') else row['trading'],
+                    'themes': []
                 })
-        
+                
         divquality_stocks = []
         if 'divquality' in results and not results['divquality'].empty:
             for _, row in results['divquality'].iterrows():
@@ -328,8 +315,10 @@ class StrategyService:
                     'shortName': row['short_name'],
                     'industryName': row['industry_name'],
                     'score': float(row['score']) if row['score'] is not None else None,
-                    'endDate': row['end_date'].strftime("%Y-%m-%d") if hasattr(row['end_date'], 'strftime') else row['end_date'],
-                    'totalMv': float(row['total_mv']) if row['total_mv'] is not None else None
+                    'totalMv': float(row['total_mv'])/10000 if row['total_mv'] is not None else None,
+                    'tradeDate': row['trading'].strftime("%Y-%m-%d") if hasattr(row['trading'], 'strftime') else row['trading'],
+                    'themes': []
+
                 })
         
         strong_watchlist_stocks = []
@@ -340,8 +329,10 @@ class StrategyService:
                     'shortName': row['short_name'],
                     'industryName': row['industry_name'],
                     'score': float(row['score']) if row['score'] is not None else None,
+                    'totalMv': float(row['total_mv'])/10000 if row['total_mv'] is not None else None,
                     'tradeDate': row['trade_date'].strftime("%Y-%m-%d") if hasattr(row['trade_date'], 'strftime') else row['trade_date'],
-                    'totalMv': float(row['total_mv']) if row['total_mv'] is not None else None
+                    'themes': []
+
                 })
 
         return [
@@ -349,36 +340,36 @@ class StrategyService:
                 "strategyId": 0,
                 "name": "成长动量策略",
                 "filterOptions": [
-                    {"name": "报告期", "type": "select", "options": date_momentum_options, "defaultValue": date_momentum_options[0]['value'] if date_momentum_options else None},
-                    {"name": "总市值", "type": "number", "options": [], "defaultValue": 30},
+                    {"name": "报告期", "filterCode": "reportDate", "type": "select", "options": date_momentum_options, "defaultValue": date_momentum_options[0]['value'] if date_momentum_options else None},
+                    # {"name": "总市值", "filterCode": "marketCap", "type": "number", "options": [], "defaultValue": 30},
                 ],
-                "stockList": growth_momentum_stocks,
+                "stockGroups": growth_momentum_stocks,
                 "stage": "",
             },
             {
                 "strategyId": 1,
                 "name": "红利质量策略",
                 "filterOptions": [
-                    {"name": "报告期", "type": "select", "options": date_divquality_options, "defaultValue": date_divquality_options[0]['value'] if date_divquality_options else None},
-                    {"name": "总市值", "type": "number", "options": [], "defaultValue": 30},
+                    {"name": "报告期", "filterCode": "reportDate", "type": "select", "options": date_divquality_options, "defaultValue": date_divquality_options[0]['value'] if date_divquality_options else None},
+                    # {"name": "总市值", "filterCode": "marketCap", "type": "number", "options": [], "defaultValue": 30},
                 ],
-                "stockList": divquality_stocks,
+                "stockGroups": divquality_stocks,
                 "stage": "",
             },
             {
                 "strategyId": 3,
                 "name": "强势股跟踪",
                 "filterOptions": [
-                    {"name": "信号池", "type": "select", "options": [
+                    {"name": "信号池", "filterCode": "stage", "type": "select", "options": [
                             {"label": "跟踪池", "value": "1"}, {"label": "触发池", "value": "2"}
                         ], "defaultValue": "1"},
-                    {"name": "交易日区间", "type": "select", "options": [
+                    {"name": "交易日区间", "filterCode": "datePeriod", "type": "select", "options": [
                             {"label": "近3天", "value": 3}, {"label": "近5天", "value": 5}, {"label": "近10天", "value": 10},
                             {"label": "近20天", "value": 20},
                         ], "defaultValue": 3},
-                    {"name": "总市值", "type": "number", "options": [], "defaultValue": 30},
+                    # {"name": "总市值", "filterCode": "marketCap", "type": "number", "options": [], "defaultValue": 30},
                 ],
-                "stockList": strong_watchlist_stocks,
+                "stockGroups": strong_watchlist_stocks,
                 "stage": "1",
             },
         ]

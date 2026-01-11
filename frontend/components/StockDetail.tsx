@@ -25,7 +25,7 @@ const StockDetail = ({ stock, aiTriggerKey, onAnalysisState }: StockDetailProps)
       setIsLoading(true);
       try {
         // 使用API服务获取K线数据
-        const data = await fetchKLineData(stock.symbol);
+        const data = await fetchKLineData(stock.code);
         setKlineData(data);
       } catch (error) {
         console.error('Error fetching K-line data:', error);
@@ -54,16 +54,18 @@ const StockDetail = ({ stock, aiTriggerKey, onAnalysisState }: StockDetailProps)
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800 flex items-center">
-            {stock.name}
-            <span className="ml-3 text-sm font-normal text-gray-400 bg-gray-100 px-2 py-1 rounded">{stock.symbol}</span>
+            {stock.shortName}
+            <span className="ml-3 text-sm font-normal text-gray-400 bg-gray-100 px-2 py-1 rounded">{stock.code}</span>
           </h1>
-          <div className="flex flex-wrap gap-2 mt-2">
-            {stock.themes.map((theme, i) => (
-              <span key={i} className="text-xs px-2 py-1 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
-                {theme}
-              </span>
-            ))}
-          </div>
+          {stock.themes && stock.themes.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {stock.themes.map((theme, i) => (
+                <span key={i} className="text-xs px-2 py-1 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
+                  {theme}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
         <div className="flex bg-gray-100 p-1 rounded-lg">
           {(['day', 'week', 'month', 'year'] as TimeFrame[]).map((tf) => (

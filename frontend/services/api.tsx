@@ -1,8 +1,30 @@
-import type { Strategy, Stock, KLineData  } from '../src/types';
-import type { FilterOption } from '../src/FilterContext';
+import type { Strategy, Stock, KLineData, StrategyAggregation  } from '../src/types';
+import type { FilterOption } from '../contexts/FilterContext';
 
 const API_BASE_URL = 'http://localhost:8000'
 
+// 获取策略聚合接口
+export const fetchStrategyAggregations = async (): Promise<StrategyAggregation[]> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/strategies/strategyAggregation`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      signal: AbortSignal.timeout(10000), // 10秒超时
+    });
+
+    if (!response.ok) {
+      console.error('获取策略列表失败：', response.statusText);
+    }
+
+    const data: StrategyAggregation[] = await response.json();
+    return data;
+  } catch (error) {
+      console.error('获取策略聚合接口失败：', error);
+      return [];
+    }
+};
 
 // 获取策略列表
 export const fetchStrategies = async (): Promise<Strategy[]> => {
@@ -25,9 +47,9 @@ export const fetchStrategies = async (): Promise<Strategy[]> => {
 
 // 获取策略选股结果
 interface StrategyParams {
-  strategy_id: number;
-  report_date?: string;
-  date_period?: number;
+  strategyId: number;
+  reportDate?: string;
+  datePeriod?: number;
   stage?: number;
 }
 
@@ -35,6 +57,7 @@ export const fetchStocksByStrategy = async (
   params: StrategyParams
 ): Promise<Stock[]> => {
   try {
+    console.log("获取策略结果传参：", params)
     const response = await fetch(`${API_BASE_URL}/strategies/getStrategyResults`, {
       method: 'POST',
       headers: {

@@ -17,9 +17,17 @@ async def list_strategies():
 
 @strategy_router.post("/getStrategyResults", response_model=List[StrategyStockItem], 
                       summary="获取策略选股结果", description="根据策略ID、报告日期、日期周期和强势股阶段获取对应的选股结果")
-async def get_strategy(request: StrategyResultRequest):
+async def get_strategy_results(request: StrategyResultRequest):
     """获取特定策略详情"""
-    strategy = StrategyService.get_portfolio_by_id(request.strategy_id, request.report_date, request.date_period, request.stage)
+    kwargs = {}
+    kwargs['strategy_id'] = request.strategy_id
+    if request.report_date is not None:
+        kwargs['report_date'] = request.report_date
+    if request.date_period is not None:
+        kwargs['date_period'] = request.date_period
+    if request.stage is not None:
+        kwargs['stage'] = request.stage
+    strategy = StrategyService.get_portfolio_by_id(**kwargs)
     if strategy is None:
         raise HTTPException(status_code=400, detail="策略选股结果不存在")
     return strategy

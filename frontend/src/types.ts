@@ -6,13 +6,15 @@ export interface Strategy {
 }
 
 export interface Stock {
-  symbol: string;
-  name: string;
-  marketCap: number; // 亿元
-  change20d: number; // 百分比
-  themes: string[];
-  industry: string;
+  code: string;
+  shortName: string;
+  industryName: string;
   score: number;
+  totalMv: number; // 亿元
+  tradeDate: string;  // 信号生成日期
+  endDate?: string;  // 报告期
+  change20d?: number; // 百分比
+  themes?: string[];
 }
 
 export interface KLineData {
@@ -38,4 +40,30 @@ export interface AIAnalysisResult {
   kimiFundamental: string;
   kimiSentiment: string;
   gptDecision: string;
+}
+
+export interface FilterOption {
+  name: string;
+  filterCode: string;
+  type: 'select' | 'number' | 'multiSelect';
+  options: Array<{
+    label: string;
+    value: string | number;
+  }>;
+  defaultValue: string | number;
+}
+
+export interface StrategyAggregation {
+  strategyId: number;
+  name: string;
+  filterOptions: FilterOption[];
+  stockGroups: Stock[];
+  stage: string;
+}
+
+// 股票在策略中的信息
+export interface StockInStrategy {
+  stock: Stock;
+  strategyId: number;
+  strategyName: string;
 }

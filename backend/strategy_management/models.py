@@ -25,10 +25,10 @@ class StrategyResultRequest(BaseModel):
             ]
         }
     )
-    strategy_id: Annotated[int, Field(alias='strategyId', ge=1, description="策略ID")]
-    report_date: Annotated[str, Field(alias='reportDate', description="报告日期")]
-    date_period: Annotated[int, Field(alias='datePeriod', ge=1, description="日期周期")]
-    stage: Annotated[int, Field(ge=0, description="阶段")]
+    strategy_id: Annotated[int, Field(alias='strategyId', description="策略ID")]
+    report_date: Annotated[Optional[str], Field(alias='reportDate', description="报告日期")] = "2025-09-30"
+    date_period: Annotated[Optional[int], Field(alias='datePeriod', description="日期周期")] = 3
+    stage: Annotated[Optional[int], Field(description="阶段")] = 1
     
     @field_validator('report_date', mode='before')
     @classmethod

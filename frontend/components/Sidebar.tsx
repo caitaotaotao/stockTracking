@@ -1,18 +1,18 @@
 import { type ReactElement } from 'react';
 import { Layout, Menu } from 'antd';
-import type { Strategy } from '../src/types';
+import type { StrategyAggregation } from '../src/types';
 
 const { Sider } = Layout;
 
 interface SidebarProps {
-  strategies: Strategy[];
+  strategies: StrategyAggregation[];
   selectedId: number;
   onSelect: (id: number) => void;
 }
 
 const Sidebar = ({ strategies, selectedId, onSelect }: SidebarProps): ReactElement => {
   const menuItems = strategies.map((strategy) => ({
-    key: strategy.id,
+    key: strategy.strategyId,
     label: strategy.name,
   }));
 

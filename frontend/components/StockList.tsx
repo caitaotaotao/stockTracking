@@ -20,7 +20,7 @@ interface StockListProps {
 const StockList = ({ stocks, selectedSymbol, onSelectStock, onAIResearch, analysisStatus }: StockListProps): ReactElement => {
   // 根据状态获取图标和样式
   const getIconByStatus = (stock: Stock) => {
-    const status = analysisStatus[stock.symbol] || 'idle';
+    const status = analysisStatus[stock.code] || 'idle';
     
     switch (status) {
       case 'analyzing':
@@ -58,7 +58,7 @@ const StockList = ({ stocks, selectedSymbol, onSelectStock, onAIResearch, analys
           <tr className="bg-gray-50 border-b text-gray-400 uppercase tracking-wider font-semibold">
             <th className="px-4 py-3">股票</th>
             <th className="px-2 py-3">总市值(亿)</th>
-            <th className="px-2 py-3">近20天涨跌幅</th>
+            {/* <th className="px-2 py-3">近20天涨跌幅</th> */}
             <th className="px-2 py-3">AI基本面</th>
           </tr>
         </thead>
@@ -68,24 +68,24 @@ const StockList = ({ stocks, selectedSymbol, onSelectStock, onAIResearch, analys
             
             return (
               <tr 
-                key={stock.symbol}
+                key={stock.code}
                 onClick={() => onSelectStock(stock)}
                 className={`cursor-pointer transition-colors hover:bg-gray-50 ${
-                  selectedSymbol === stock.symbol ? 'bg-indigo-50' : ''
+                  selectedSymbol === stock.code ? 'bg-indigo-50' : ''
                 }`}
               >
                 <td className="px-4 py-4">
-                  <div className="font-semibold text-gray-900">{stock.name}</div>
-                  <div className="text-gray-400 text-xxs">{stock.symbol}</div>
+                  <div className="font-semibold text-gray-900">{stock.shortName}</div>
+                  <div className="text-gray-400 text-xxs">{stock.code}</div>
                 </td>
                 <td className="px-2 py-4 text-gray-600 font-medium">
-                  {stock.marketCap.toFixed(2)}
+                  {stock.totalMv.toFixed(2)}
                 </td>
-                <td className={`px-2 py-4 font-bold ${
+                {/* <td className={`px-2 py-4 font-bold ${
                   stock.change20d >= 0 ? 'text-red-500' : 'text-green-500'
                 }`}>
                   {stock.change20d >= 0 ? '+' : ''}{stock.change20d.toFixed(2)}%
-                </td>
+                </td> */}
                 <td className="px-2 py-4">
                   <button 
                     onClick={(e) => {
@@ -94,7 +94,7 @@ const StockList = ({ stocks, selectedSymbol, onSelectStock, onAIResearch, analys
                     }}
                     className={iconConfig.className}
                     title={iconConfig.title}
-                    disabled={analysisStatus[stock.symbol] === 'analyzing'}
+                    disabled={analysisStatus[stock.code] === 'analyzing'}
                   >
                     {iconConfig.icon}
                   </button>

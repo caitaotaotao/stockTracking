@@ -11,6 +11,14 @@ import os
 # 创建FastAPI应用
 app = FastAPI(title="每日选股复盘系统", description="提供策略和个股研究的管理功能")
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 开发环境允许所有源，生产环境改为具体域名
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # 注册路由
 app.include_router(strategy_router)
 app.include_router(agents_router)
@@ -25,14 +33,6 @@ async def root():
             "agents": "/agents_sse/"
         }
     }
-
-origins = [
-    "http://localhost",
-    "http://localhost:3000",  # React默认端口
-    "http://127.0.0.1",
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:8080",
-]
 
 # 添加CORS中间件
 app.add_middleware(
