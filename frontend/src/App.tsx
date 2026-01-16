@@ -65,7 +65,6 @@ useEffect(() => {
   if (!loading && defaultStrategyId !== undefined) {
     const defaultStrategy = strategies[defaultStrategyId];
     if (defaultStrategy && defaultStrategy.stockGroups) {
-      console.log('Default strategy stock list:', defaultStrategy.stockGroups)
       setStocks(defaultStrategy.stockGroups);
       if (defaultStrategy.stockGroups.length > 0) setSelectedStock(defaultStrategy.stockGroups[0]);
     } else {

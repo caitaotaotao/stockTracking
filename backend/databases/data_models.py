@@ -48,6 +48,7 @@ class StrategyDivquality(Base):
     ep = Column(FLOAT)
     ep_pivot_1y = Column(FLOAT)
     signal = Column(FLOAT)
+    trading = Column(Date)
 
 
 class StrategyGrowthmomentum(Base):
@@ -113,3 +114,14 @@ class TechStrongSignals(Base):
 
     def __repr__(self):
         return "<TechStrongWatchlist(name=technicals_strongStocks_watchlist, comment= 技术流派-强势股观察名单)>"
+
+class StockLatestIndicator(Base):
+    __tablename__ = 'platform_stock_daily'
+    __table_args__ = {'schema': 'quant_research'}
+    code = Column(VARCHAR, primary_key=True)
+    short_name = Column(VARCHAR)
+    trade_date = Column(Date)
+    close = Column(FLOAT)
+    total_mv = Column(FLOAT)
+    change_pct = Column(FLOAT)
+    industry_name = Column(VARCHAR)

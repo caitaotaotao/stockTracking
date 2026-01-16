@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from typing import List
 
 from .models import (
-    Strategy, StrategyStockItem, StrategyResultRequest, StrategyFilter
+    Strategy, StrategyStockItem, StrategyResultRequest, StrategyFilter, StockPrice
 )
 from .services import StrategyService, StockPriceService
 
@@ -15,7 +15,7 @@ async def list_strategies():
     """获取所有策略列表"""
     return StrategyService.get_all_strategies()
 
-@strategy_router.post("/getStrategyResults", response_model=List[StrategyStockItem], 
+@strategy_router.post("/getStrategyResults", response_model=List[dict], 
                       summary="获取策略选股结果", description="根据策略ID、报告日期、日期周期和强势股阶段获取对应的选股结果")
 async def get_strategy_results(request: StrategyResultRequest):
     """获取特定策略详情"""
@@ -41,9 +41,9 @@ async def get_strategy_filters(request: StrategyFilter) -> List[dict]:
     return filter_options
 
 @strategy_router.post("/getStockPrice", response_model=List[dict])
-async def get_stock_price(stock_code: str):
+async def get_stock_price(request: StockPrice):
     """获取股票的最新价格"""
-    price = StockPriceService.get_historical_prices(stock_code)
+    price = StockPriceService.get_historical_prices(request.stock_code)
     if price is None:
         raise HTTPException(status_code=400, detail="股票价格不存在")
     return price

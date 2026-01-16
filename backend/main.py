@@ -34,15 +34,6 @@ async def root():
         }
     }
 
-# 添加CORS中间件
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # 允许的源列表
-    allow_credentials=True,  # 允许cookies
-    allow_methods=["*"],    # 允许所有方法
-    allow_headers=["*"],    # 允许所有头信息
-)
-
 
 if __name__ == '__main__':
     print(os.getcwd())

@@ -50,7 +50,7 @@ const StockList = ({ stocks, selectedSymbol, onSelectStock, onAIResearch, analys
         };
     }
   };
-  
+    
   return (
     <div className="w-80 border-r bg-white h-full flex flex-col overflow-hidden">
       <table className="w-full text-left text-xs border-collapse">
@@ -63,12 +63,12 @@ const StockList = ({ stocks, selectedSymbol, onSelectStock, onAIResearch, analys
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100 overflow-y-auto">
-          {stocks.map((stock) => {
+          {stocks.map((stock, index) => {
             const iconConfig = getIconByStatus(stock);
             
             return (
               <tr 
-                key={stock.code}
+                key={index}
                 onClick={() => onSelectStock(stock)}
                 className={`cursor-pointer transition-colors hover:bg-gray-50 ${
                   selectedSymbol === stock.code ? 'bg-indigo-50' : ''

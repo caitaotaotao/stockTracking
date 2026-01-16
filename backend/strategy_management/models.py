@@ -69,3 +69,7 @@ class StrategyFilter(BaseModel):
     )
     
     strategy_id: int = Field(alias='strategyId', description="策略ID")
+
+class StockPrice(BaseModel):
+    """股票价格模型"""
+    stock_code: str = Field(alias='stockCode', description="股票代码")

@@ -3,7 +3,7 @@ import concurrent.futures
 from typing import List, Optional, Dict
 from strategy_management.models import Strategy
 from databases.databases_connection import Session, engine
-from databases.data_models import StrategyDivquality, BasicInfoStock, StrategyGrowthmomentum, StockIndicators, TechStrongWatchlist, TechStrongSignals, MarketPriceDaily
+from databases.data_models import StrategyDivquality, BasicInfoStock, StrategyGrowthmomentum, StockIndicators, TechStrongWatchlist, TechStrongSignals, MarketPriceDaily, StockLatestIndicator
 from utilities.basic_funcs import stock_market
 from sqlalchemy import func, select, text
 
@@ -28,35 +28,18 @@ class StrategyService:
         assert stage in [1,2]
         assert date_period in [3,5,10,20]
         with Session() as session:
-            # 子查询获取最新市值
-            lastest_date_subquery = session.query(
-                StockIndicators.code,
-                func.max(StockIndicators.trade_date).label('latest_date')
-            ).group_by(StockIndicators.code).subquery()
-            
-            latest_mv_subquery = session.query(
-                StockIndicators.code,
-                StockIndicators.total_mv,
-            ).join(
-                lastest_date_subquery,
-                (StockIndicators.code == lastest_date_subquery.c.code) &
-                (StockIndicators.trade_date == lastest_date_subquery.c.latest_date)
-            ).subquery()
-
             if strategy_id == 1:  # 红利质量策略
                 r = session.query(
+                    StrategyDivquality.trading.label('trade_date'),
                     StrategyDivquality.code,
-                    BasicInfoStock.short_name,
-                    StrategyDivquality.industry_name,
+                    StockLatestIndicator.short_name,
+                    StockLatestIndicator.industry_name,
                     StrategyDivquality.signal,
-                    latest_mv_subquery.c.total_mv
+                    StockLatestIndicator.total_mv,
+                    StockLatestIndicator.change_pct.label('change20d')
                 ).join(
-                    BasicInfoStock,
-                    StrategyDivquality.code == BasicInfoStock.ticker
-                ).join(
-                    latest_mv_subquery,
-                    StrategyDivquality.code == latest_mv_subquery.c.code,
-                    isouter=True
+                    StockLatestIndicator,
+                    StrategyDivquality.code == StockLatestIndicator.code
                 ).filter(
                     StrategyDivquality.end_date == report_date
                 ).order_by(StrategyDivquality.signal.desc())
@@ -65,18 +48,16 @@ class StrategyService:
             
             elif strategy_id == 0:  # 成长动量策略
                 r = session.query(
+                    StrategyGrowthmomentum.trading.label('trade_date'),
                     StrategyGrowthmomentum.code,
-                    BasicInfoStock.short_name,
-                    StrategyGrowthmomentum.industry_code.label('industry_name'),
+                    StockLatestIndicator.short_name,
+                    StockLatestIndicator.industry_name,
                     StrategyGrowthmomentum.signal_growth.label('signal'),
-                    latest_mv_subquery.c.total_mv
+                    StockLatestIndicator.total_mv,
+                    StockLatestIndicator.change_pct.label('change20d')
                 ).join(
-                    BasicInfoStock,
-                    StrategyGrowthmomentum.code == BasicInfoStock.ticker
-                ).join(
-                    latest_mv_subquery,
-                    StrategyGrowthmomentum.code == latest_mv_subquery.c.code,
-                    isouter=True
+                    StockLatestIndicator,
+                    StrategyGrowthmomentum.code == StockLatestIndicator.code
                 ).filter(
                     StrategyGrowthmomentum.end_date == report_date
                 ).order_by(StrategyGrowthmomentum.signal_growth.desc()).all()
@@ -86,7 +67,7 @@ class StrategyService:
             elif strategy_id == 3:  # 强势股跟踪策略
                 if stage == 1:
                     watchlist_dates_sq = (
-                        select(TechStrongWatchlist.trade_date.label('trade_date'))
+                        select(TechStrongWatchlist.trade_date)
                         .distinct()
                         .order_by(TechStrongWatchlist.trade_date.desc())
                         .limit(date_period)
@@ -96,16 +77,21 @@ class StrategyService:
                         select(
                             TechStrongWatchlist.trade_date, 
                             TechStrongWatchlist.ticker.label('code'), 
-                            TechStrongWatchlist.board, 
-                            TechStrongWatchlist.score
+                            TechStrongWatchlist.board,
+                            TechStrongWatchlist.score.label('signal'),
+                            StockLatestIndicator.short_name,
+                            StockLatestIndicator.industry_name,
+                            StockLatestIndicator.total_mv,
+                            StockLatestIndicator.change_pct.label('change20d')
                             )
                         .join(watchlist_dates_sq, TechStrongWatchlist.trade_date == watchlist_dates_sq.c.trade_date)
+                        .join(StockLatestIndicator, TechStrongWatchlist.ticker == StockLatestIndicator.code)
                         .order_by(TechStrongWatchlist.trade_date.desc(), TechStrongWatchlist.score.desc())
                     )
-                    r = pd.DataFrame(session.execute(r1).scalars().all())
+                    r = pd.DataFrame(session.execute(r1).all())
                 elif stage == 2:
                     signals_dates_sq = (
-                        select(TechStrongSignals.trade_date.label('trade_date'))
+                        select(TechStrongSignals.trade_date)
                         .distinct()
                         .order_by(TechStrongSignals.trade_date.desc())
                         .limit(date_period)
@@ -116,12 +102,17 @@ class StrategyService:
                             TechStrongSignals.trade_date, 
                             TechStrongSignals.ticker.label('code'), 
                             TechStrongSignals.board, 
-                            TechStrongSignals.score
+                            TechStrongSignals.score.label('signal'),
+                            StockLatestIndicator.short_name,
+                            StockLatestIndicator.industry_name,
+                            StockLatestIndicator.total_mv,
+                            StockLatestIndicator.change_pct.label('change20d')
                             )
                         .join(signals_dates_sq, TechStrongSignals.trade_date == signals_dates_sq.c.trade_date)
+                        .join(StockLatestIndicator, TechStrongWatchlist.ticker == StockLatestIndicator.code)
                         .order_by(TechStrongSignals.trade_date.desc(), TechStrongSignals.score.desc())
                     )
-                    r = pd.DataFrame(session.execute(r2).scalars().all())
+                    r = pd.DataFrame(session.execute(r2).all())
                 else:
                     raise ValueError("Invalid stage value. Must be 1 or 2.")
             else:
@@ -134,11 +125,13 @@ class StrategyService:
             original_code = r.iloc[i]['code'].split('.')[-1] if '.' in r.iloc[i]['code'] else r.iloc[i]['code']
             _r = {
                 'code': r.iloc[i]['code'],
+                'tradeDate': r.iloc[i]['trade_date'],
                 'shortName': r.iloc[i]['short_name'],
                 'industryName': r.iloc[i]['industry_name'],
-                'latestMV': r.iloc[i]['total_mv'],
-                'signal': r.iloc[i]['signal'],
+                'totalMv': r.iloc[i]['total_mv'],
+                'score': r.iloc[i]['signal'],
                 'themes': [],  # 主题数据暂未添加
+                'change20d': r.iloc[i]['change20d'],
             }
             result.append(_r)
         return result # type: ignore
@@ -202,18 +195,9 @@ class StrategyService:
         # 定义查询函数
         def query_growth_momentum():
             sql = """
-                with latest_mv as (
-                    select code, trade_date, total_mv
-                    from quant_research.indicator_daily
-                    where trade_date = (
-                        select MAX(trade_date)
-                        from quant_research.indicator_daily
-                    )
-                )
-                SELECT a.code, b.short_name, a.end_date, a.trading, a.industry_code as industry_name, a.signal_growth as score, c.total_mv
+                SELECT a.code, b.short_name, a.end_date, a.trading, b.industry_name, a.signal_growth as score, b.total_mv, b.change_pct
                 FROM quant_research.strategy_growth_momentum as a
-                left join quant_research.basic_info_stock as b on a.code = b.ticker
-                left join latest_mv as c on a.code = c.code
+                left join quant_research.platform_stock_daily as b on a.code = b.code
                 WHERE a.end_date = (
                     SELECT MAX(end_date)
                     FROM quant_research.strategy_growth_momentum
@@ -224,18 +208,9 @@ class StrategyService:
             
         def query_divquality():
             sql = """
-                with latest_mv as (
-                        select code, trade_date, total_mv
-                        from quant_research.indicator_daily
-                        where trade_date = (
-                            select MAX(trade_date)
-                            from quant_research.indicator_daily
-                        )
-                )
-                SELECT a.code, b.short_name, a.end_date, a.trading, a.industry_name, a.signal as score, c.total_mv
+                SELECT a.code, b.short_name, a.end_date, a.trading, b.industry_name, a.signal as score, b.total_mv, b.change_pct
                 FROM quant_research.strategy_divquality as a
-                left join quant_research.basic_info_stock as b on a.code = b.ticker
-                left join latest_mv as c on a.code = c.code
+                left join quant_research.platform_stock_daily as b on a.code = b.code
                 WHERE a.end_date = (
                     SELECT MAX(end_date)
                     FROM quant_research.strategy_divquality
@@ -246,27 +221,9 @@ class StrategyService:
         
         def query_strong_watchlist():
             sql = """
-                with sw_contituent as (
-                            select l1_name, ts_code
-                            from (
-                                select *, row_number() over (PARTITION BY ts_code order by in_date DESC) AS rn
-                                from quant_research.sw_industry_constituent
-                            ) as ranked
-                            where rn=1
-                        ),
-                    latest_mv as (
-                        select code, trade_date, total_mv
-                        from quant_research.indicator_daily
-                        where trade_date = (
-                            select MAX(trade_date)
-                            from quant_research.indicator_daily
-                        )
-                    )
-                SELECT a.ticker as code, b.short_name, a.trade_date, c.l1_name as industry_name, a.score, d.total_mv
+                SELECT a.ticker as code, b.short_name, a.trade_date, b.industry_name, a.score, b.total_mv, b.change_pct
                 FROM quant_research."technicals_strongStocks_watchlist" as a
-                left join quant_research.basic_info_stock as b on a.ticker = b.ticker
-                left join sw_contituent as c on a.ticker = c.ts_code
-                left join latest_mv as d on a.ticker = d.code
+                left join quant_research.platform_stock_daily as b on a.ticker = b.code
                 WHERE a.trade_date in (
                     SELECT trade_date
                     FROM quant_research."technicals_strongStocks_watchlist"
@@ -304,7 +261,8 @@ class StrategyService:
                     'score': float(row['score']) if row['score'] is not None else None,
                     'totalMv': float(row['total_mv'])/10000 if row['total_mv'] is not None else None,
                     'tradeDate': row['trading'].strftime("%Y-%m-%d") if hasattr(row['trading'], 'strftime') else row['trading'],
-                    'themes': []
+                    'themes': [],
+                    'change20d': float(row['change_pct']) if row['change_pct'] is not None else None
                 })
                 
         divquality_stocks = []
@@ -317,8 +275,8 @@ class StrategyService:
                     'score': float(row['score']) if row['score'] is not None else None,
                     'totalMv': float(row['total_mv'])/10000 if row['total_mv'] is not None else None,
                     'tradeDate': row['trading'].strftime("%Y-%m-%d") if hasattr(row['trading'], 'strftime') else row['trading'],
-                    'themes': []
-
+                    'themes': [],
+                    'change20d': float(row['change_pct']) if row['change_pct'] is not None else None
                 })
         
         strong_watchlist_stocks = []
@@ -331,8 +289,8 @@ class StrategyService:
                     'score': float(row['score']) if row['score'] is not None else None,
                     'totalMv': float(row['total_mv'])/10000 if row['total_mv'] is not None else None,
                     'tradeDate': row['trade_date'].strftime("%Y-%m-%d") if hasattr(row['trade_date'], 'strftime') else row['trade_date'],
-                    'themes': []
-
+                    'themes': [],
+                    'change20d': float(row['change_pct']) if row['change_pct'] is not None else None
                 })
 
         return [
@@ -389,15 +347,17 @@ class StockPriceService:
                 MarketPriceDaily.close,
                 MarketPriceDaily.high,
                 MarketPriceDaily.low,
-                MarketPriceDaily.volume
+                MarketPriceDaily.vol
             ).filter(
-                MarketPriceDaily.code == stock_code,
+                MarketPriceDaily.ticker == stock_code,
             ).order_by(MarketPriceDaily.trade_date.asc())
             r = pd.DataFrame(r)
             r['trade_date'] = pd.to_datetime(r['trade_date'])
         if r.empty:
             return None
         else:
+            # 按trade_date去重
+            r = r.drop_duplicates(subset=['trade_date'], keep='last')
             result = []
             for i in range(len(r)):
                 _r = {
@@ -406,7 +366,7 @@ class StockPriceService:
                     'close': r.iloc[i]['close'],
                     'high': r.iloc[i]['high'],
                     'low': r.iloc[i]['low'],
-                    'volume': r.iloc[i]['volume'],
+                    'volume': r.iloc[i]['vol'],
                 }
                 result.append(_r)
         return result

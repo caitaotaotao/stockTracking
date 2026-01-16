@@ -74,13 +74,13 @@ export const fetchStocksByStrategy = async (
 
     const result = await response.json();
     return result.map((stock: any) => ({
-        symbol: stock.code,
-        name: stock.shortName,
-        marketCap: stock.latestMV,
-        change20d: stock.change20D,
+        code: stock.code,
+        shortName: stock.shortName,
+        totalMv: stock.totalMv,
+        change20d: stock.change20d,
         themes: stock.themes,
-        industry: stock.industryName,
-        score: stock.signal,
+        industryName: stock.industryName,
+        score: stock.score,
     }));
   } catch (error) {
     console.error('获取策略选股结果失败：', error);
@@ -98,7 +98,7 @@ export const fetchKLineData = async (
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ stock_code: symbol }),
+      body: JSON.stringify({ stockCode: symbol }),
     });
     
     if (!response.ok) {
