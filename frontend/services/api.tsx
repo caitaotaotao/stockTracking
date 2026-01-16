@@ -57,7 +57,6 @@ export const fetchStocksByStrategy = async (
   params: StrategyParams
 ): Promise<Stock[]> => {
   try {
-    console.log("获取策略结果传参：", params)
     const response = await fetch(`${API_BASE_URL}/strategies/getStrategyResults`, {
       method: 'POST',
       headers: {

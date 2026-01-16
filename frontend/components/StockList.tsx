@@ -1,24 +1,96 @@
-
-import { type ReactElement } from 'react';
+import { Table } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
+import { type ReactElement, useMemo, useEffect, useRef, useState } from 'react';
 import type { Stock } from '../src/types';
 import { 
-  OpenAIOutlined,      // idle - 默认AI图标
-  LoadingOutlined,    // analyzing - 加载中
-  CheckCircleOutlined, // completed - 完成
-  CloseCircleOutlined  // error - 错误
+  OpenAIOutlined,
+  LoadingOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined
 } from '@ant-design/icons';
-
 
 interface StockListProps {
   stocks: Stock[];
   selectedSymbol: string;
   onSelectStock: (stock: Stock) => void;
   onAIResearch: (stock: Stock) => void;
-  analysisStatus: Record<string, 'idle' | 'analyzing' | 'completed' | 'error'>;  // 股票分析状态
+  analysisStatus: Record<string, 'idle' | 'analyzing' | 'completed' | 'error'>;
 }
 
-const StockList = ({ stocks, selectedSymbol, onSelectStock, onAIResearch, analysisStatus }: StockListProps): ReactElement => {
-  // 根据状态获取图标和样式
+const StockList = ({ 
+  stocks, 
+  selectedSymbol, 
+  onSelectStock, 
+  onAIResearch, 
+  analysisStatus 
+}: StockListProps): ReactElement => {
+  
+  // 自适应滚动高度
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scrollY, setScrollY] = useState<number>(500);
+  
+  // 为每条数据添加唯一 ID
+  const dataSourceWithId = useMemo(() => {
+    return stocks.map((stock, index) => ({
+      ...stock,
+      uniqueId: `${stock.code}_${index}`
+    }));
+  }, [stocks]);
+  
+  // 高度计算逻辑
+  useEffect(() => {
+    const updateHeight = () => {
+      if (containerRef.current) {
+        const height = containerRef.current.clientHeight - 55;
+        console.log('updateHeight', height);
+        console.log('currentHeight', containerRef.current.clientHeight);
+        if (height > 0) {
+          setScrollY(height);
+        }
+      }
+    };
+
+    // 立即执行
+    updateHeight();
+
+    // 使用 ResizeObserver 监听容器大小变化
+    const resizeObserver = new ResizeObserver(() => {
+      updateHeight();
+    });
+
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
+    // 额外的延迟执行，确保初始化时能获取到高度
+    const timer = setTimeout(updateHeight, 100);
+
+    // 监听窗口大小变化
+    window.addEventListener('resize', updateHeight);
+
+    return () => {
+      clearTimeout(timer);
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateHeight);
+    };
+  }, []); // 移除 stocks 依赖
+  
+  // 当 stocks 变化时重新计算高度
+  useEffect(() => {
+    const updateHeight = () => {
+      if (containerRef.current) {
+        const height = containerRef.current.clientHeight - 55;
+        if (height > 0) {
+          setScrollY(height);
+        }
+      }
+    };
+    
+    // 延迟执行，等待 Table 渲染完成
+    const timer = setTimeout(updateHeight, 100);
+    return () => clearTimeout(timer);
+  }, [stocks.length]); // 只依赖 stocks 的长度，而不是整个数组
+  
   const getIconByStatus = (stock: Stock) => {
     const status = analysisStatus[stock.code] || 'idle';
     
@@ -50,60 +122,78 @@ const StockList = ({ stocks, selectedSymbol, onSelectStock, onAIResearch, analys
         };
     }
   };
-    
+
+  const columns: ColumnsType<Stock & { uniqueId: string }> = [
+    {
+      title: '股票',
+      dataIndex: 'shortName',
+      key: 'shortName',
+      render: (text: string, record) => (
+        <div>
+          <div className="font-semibold text-gray-900 whitespace-nowrap">{text}</div>
+          <div className="text-gray-400 text-xs whitespace-nowrap">{record.code}</div>
+        </div>
+      ),
+    },
+    {
+      title: '总市值(Bn)',
+      dataIndex: 'totalMv',
+      key: 'totalMv',
+      align: 'right',
+      render: (value: number) => (
+        <span className="text-gray-600 font-medium whitespace-nowrap">
+          {value.toFixed(2)}
+        </span>
+      ),
+    },
+    {
+      title: 'AI基本面',
+      key: 'action',
+      width: 90,
+      align: 'center',
+      render: (_: any, record) => {
+        const iconConfig = getIconByStatus(record);
+        return (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onAIResearch(record);
+            }}
+            className={iconConfig.className}
+            title={iconConfig.title}
+            disabled={analysisStatus[record.code] === 'analyzing'}
+          >
+            {iconConfig.icon}
+          </button>
+        );
+      },
+    },
+  ];
+
   return (
-    <div className="w-80 border-r bg-white h-full flex flex-col overflow-hidden">
-      <table className="w-full text-left text-xs border-collapse">
-        <thead>
-          <tr className="bg-gray-50 border-b text-gray-400 uppercase tracking-wider font-semibold">
-            <th className="px-4 py-3">股票</th>
-            <th className="px-2 py-3">总市值(亿)</th>
-            {/* <th className="px-2 py-3">近20天涨跌幅</th> */}
-            <th className="px-2 py-3">AI基本面</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-100 overflow-y-auto">
-          {stocks.map((stock, index) => {
-            const iconConfig = getIconByStatus(stock);
-            
-            return (
-              <tr 
-                key={index}
-                onClick={() => onSelectStock(stock)}
-                className={`cursor-pointer transition-colors hover:bg-gray-50 ${
-                  selectedSymbol === stock.code ? 'bg-indigo-50' : ''
-                }`}
-              >
-                <td className="px-4 py-4">
-                  <div className="font-semibold text-gray-900">{stock.shortName}</div>
-                  <div className="text-gray-400 text-xxs">{stock.code}</div>
-                </td>
-                <td className="px-2 py-4 text-gray-600 font-medium">
-                  {stock.totalMv.toFixed(2)}
-                </td>
-                {/* <td className={`px-2 py-4 font-bold ${
-                  stock.change20d >= 0 ? 'text-red-500' : 'text-green-500'
-                }`}>
-                  {stock.change20d >= 0 ? '+' : ''}{stock.change20d.toFixed(2)}%
-                </td> */}
-                <td className="px-2 py-4">
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();  // 阻止行点击事件冒泡
-                      onAIResearch(stock);
-                    }}
-                    className={iconConfig.className}
-                    title={iconConfig.title}
-                    disabled={analysisStatus[stock.code] === 'analyzing'}
-                  >
-                    {iconConfig.icon}
-                  </button>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <div 
+      ref={containerRef}
+      className="flex-shrink-0 border-r bg-white h-full"
+    >
+      <Table
+        columns={columns}
+        dataSource={dataSourceWithId}
+        rowKey="uniqueId"
+        pagination={false}
+        scroll={{ 
+          y: scrollY,
+          x: 'max-content'
+        }}
+        size="small"
+        sticky
+        rowClassName={(record) =>
+          selectedSymbol === record.code ? 'bg-indigo-50' : ''
+        }
+        onRow={(record) => ({
+          onClick: () => onSelectStock(record),
+          className: 'cursor-pointer hover:bg-gray-50 transition-colors'
+        })}
+      />
     </div>
   );
 };

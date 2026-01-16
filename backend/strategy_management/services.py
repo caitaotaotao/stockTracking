@@ -128,7 +128,7 @@ class StrategyService:
                 'tradeDate': r.iloc[i]['trade_date'],
                 'shortName': r.iloc[i]['short_name'],
                 'industryName': r.iloc[i]['industry_name'],
-                'totalMv': r.iloc[i]['total_mv'],
+                'totalMv': r.iloc[i]['total_mv']/100000,
                 'score': r.iloc[i]['signal'],
                 'themes': [],  # 主题数据暂未添加
                 'change20d': r.iloc[i]['change20d'],
@@ -259,7 +259,7 @@ class StrategyService:
                     'shortName': row['short_name'],
                     'industryName': row['industry_name'],
                     'score': float(row['score']) if row['score'] is not None else None,
-                    'totalMv': float(row['total_mv'])/10000 if row['total_mv'] is not None else None,
+                    'totalMv': float(row['total_mv'])/100000 if row['total_mv'] is not None else None,
                     'tradeDate': row['trading'].strftime("%Y-%m-%d") if hasattr(row['trading'], 'strftime') else row['trading'],
                     'themes': [],
                     'change20d': float(row['change_pct']) if row['change_pct'] is not None else None
@@ -273,7 +273,7 @@ class StrategyService:
                     'shortName': row['short_name'],
                     'industryName': row['industry_name'],
                     'score': float(row['score']) if row['score'] is not None else None,
-                    'totalMv': float(row['total_mv'])/10000 if row['total_mv'] is not None else None,
+                    'totalMv': float(row['total_mv'])/100000 if row['total_mv'] is not None else None,
                     'tradeDate': row['trading'].strftime("%Y-%m-%d") if hasattr(row['trading'], 'strftime') else row['trading'],
                     'themes': [],
                     'change20d': float(row['change_pct']) if row['change_pct'] is not None else None
@@ -287,7 +287,7 @@ class StrategyService:
                     'shortName': row['short_name'],
                     'industryName': row['industry_name'],
                     'score': float(row['score']) if row['score'] is not None else None,
-                    'totalMv': float(row['total_mv'])/10000 if row['total_mv'] is not None else None,
+                    'totalMv': float(row['total_mv'])/100000 if row['total_mv'] is not None else None,
                     'tradeDate': row['trade_date'].strftime("%Y-%m-%d") if hasattr(row['trade_date'], 'strftime') else row['trade_date'],
                     'themes': [],
                     'change20d': float(row['change_pct']) if row['change_pct'] is not None else None
@@ -358,6 +358,8 @@ class StockPriceService:
         else:
             # 按trade_date去重
             r = r.drop_duplicates(subset=['trade_date'], keep='last')
+            # 剔除null数据
+            r.dropna(inplace=True)
             result = []
             for i in range(len(r)):
                 _r = {

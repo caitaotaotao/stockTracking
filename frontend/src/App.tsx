@@ -99,7 +99,7 @@ useEffect(() => {
     }));
   };
 
-  // 根据策略ID和筛选条件获取股票列表
+  // 根据筛选条件获取股票列表
   useEffect(() => {
     if (selectedStrategyId) {
       // 从筛选值中提取参数
@@ -122,7 +122,34 @@ useEffect(() => {
         setStocks([]);
       });
     }
-  }, [selectedStrategyId, filterValues]);
+  }, [filterValues]);
+
+
+  // 选中策略变化，获取股票列表和初始化筛选值
+  useEffect(() => {
+    if (selectedStrategyId) {
+      const selectedStrategy = strategies.find(s => s.strategyId === selectedStrategyId);
+      if (selectedStrategy) {
+        setStocks(selectedStrategy.stockGroups);
+        setFilterOptions(selectedStrategy.filterOptions);
+        const selectedDefaultValues: Record<string, any> = {};
+        selectedStrategy.filterOptions.forEach(option => {
+          if (option.defaultValue !== undefined) {
+            selectedDefaultValues[option.filterCode] = option.defaultValue;
+          } else if (option.type === 'multiSelect') {
+            selectedDefaultValues[option.filterCode] = [];
+          } else {
+            selectedDefaultValues[option.filterCode] = '';
+          }
+        });
+        setFilterValues(selectedDefaultValues);
+      } else {
+        setStocks([]);
+        setFilterOptions([]);
+        setFilterValues({});
+      }
+    }
+  }, [selectedStrategyId])
 
   const selectedStrategy = strategies.find(s => s.strategyId === selectedStrategyId);
 
