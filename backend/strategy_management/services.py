@@ -1,5 +1,6 @@
 import pandas as pd
 import concurrent.futures
+from datetime import datetime, time
 from typing import List, Optional, Dict
 from strategy_management.models import Strategy
 from databases.databases_connection import Session, engine
@@ -125,7 +126,7 @@ class StrategyService:
             original_code = r.iloc[i]['code'].split('.')[-1] if '.' in r.iloc[i]['code'] else r.iloc[i]['code']
             _r = {
                 'code': r.iloc[i]['code'],
-                'tradeDate': r.iloc[i]['trade_date'],
+                'tradeDate': int(datetime.combine(r.iloc[i]['trade_date'], time.min).timestamp() * 1000),
                 'shortName': r.iloc[i]['short_name'],
                 'industryName': r.iloc[i]['industry_name'],
                 'totalMv': r.iloc[i]['total_mv']/100000,
@@ -260,7 +261,7 @@ class StrategyService:
                     'industryName': row['industry_name'],
                     'score': float(row['score']) if row['score'] is not None else None,
                     'totalMv': float(row['total_mv'])/100000 if row['total_mv'] is not None else None,
-                    'tradeDate': row['trading'].strftime("%Y-%m-%d") if hasattr(row['trading'], 'strftime') else row['trading'],
+                    'tradeDate': int(datetime.combine(row['trading'], time.min).timestamp()*1000),
                     'themes': [],
                     'change20d': float(row['change_pct']) if row['change_pct'] is not None else None
                 })
@@ -274,7 +275,7 @@ class StrategyService:
                     'industryName': row['industry_name'],
                     'score': float(row['score']) if row['score'] is not None else None,
                     'totalMv': float(row['total_mv'])/100000 if row['total_mv'] is not None else None,
-                    'tradeDate': row['trading'].strftime("%Y-%m-%d") if hasattr(row['trading'], 'strftime') else row['trading'],
+                    'tradeDate': int(datetime.combine(row['trading'], time.min).timestamp()*1000),
                     'themes': [],
                     'change20d': float(row['change_pct']) if row['change_pct'] is not None else None
                 })
@@ -288,7 +289,7 @@ class StrategyService:
                     'industryName': row['industry_name'],
                     'score': float(row['score']) if row['score'] is not None else None,
                     'totalMv': float(row['total_mv'])/100000 if row['total_mv'] is not None else None,
-                    'tradeDate': row['trade_date'].strftime("%Y-%m-%d") if hasattr(row['trade_date'], 'strftime') else row['trade_date'],
+                    'tradeDate': int(datetime.combine(row['trade_date'], time.min).timestamp()*1000),
                     'themes': [],
                     'change20d': float(row['change_pct']) if row['change_pct'] is not None else None
                 })
@@ -363,7 +364,7 @@ class StockPriceService:
             result = []
             for i in range(len(r)):
                 _r = {
-                    'tradeDate': r.iloc[i]['trade_date'].strftime("%Y-%m-%d %H:%M:%S"),
+                    'tradeDate': r.iloc[i]['trade_date'].timestamp() * 1000,
                     'open': r.iloc[i]['open'],
                     'close': r.iloc[i]['close'],
                     'high': r.iloc[i]['high'],

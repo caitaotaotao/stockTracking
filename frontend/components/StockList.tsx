@@ -160,10 +160,19 @@ const StockList = ({
       dataIndex: 'tradeDate',
       key: 'tradeDate',
       align: 'right',
-      render: (value: string) => {
+      render: (value: number) => {
         // 直接从字符串中提取月份和日期，避免时区问题
-        const [_, month, day] = value.split('-');
-        const formattedDate = `${month}.${day}`;
+        const date = new Date(value);
+        // 检查日期是否有效
+        if (isNaN(date.getTime())) {
+          console.error(`Invalid timestamp value: ${value}`);
+          return <span className="text-gray-600 font-medium whitespace-nowrap">-</span>;
+        }
+        
+        // 获取月份和日期并格式化为 MM-DD
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const formattedDate = `${month}-${day}`;
         return (
           <span className="text-gray-600 font-medium whitespace-nowrap">
             {formattedDate}

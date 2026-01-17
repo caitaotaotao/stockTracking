@@ -10,8 +10,8 @@ export interface Stock {
   shortName: string;
   industryName: string;
   score: number;
-  totalMv: number; // 亿元
-  tradeDate: string;  // 信号生成日期
+  totalMv: number; // 十亿
+  tradeDate: number;  // 信号生成日期，毫秒时间戳
   endDate?: string;  // 报告期
   change20d?: number; // 百分比
   themes?: string[];
