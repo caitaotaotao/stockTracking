@@ -163,7 +163,7 @@ useEffect(() => {
       />
 
       {/* 详情面板 */}
-      <Layout className="bg-gray-100" style={{ marginLeft: '10px' }}>
+      <Layout className="bg-gray-100" style={{ marginLeft: '8px' }}>
         <Content className="flex flex-col min-w-0">
           {/* 策略头部区域 */}
           <div className="bg-white shadow-sm">
@@ -177,25 +177,27 @@ useEffect(() => {
           </div>
 
           {/* 详情面板 */}
-          <div className="flex-1 flex overflow-hidden p-4 gap-4">
-            {/* 左侧股票列表 */}
-            <div className="w-2/5 max-w-[300px] bg-white rounded-lg shadow-sm overflow-hidden">
-              <StockList
-                stocks={stocks}
-                selectedSymbol={selectedStock?.code || ''}
-                onSelectStock={setSelectedStock}
-                onAIResearch={handleAIResearch}
-                analysisStatus={analysisStatus}
-              />
-            </div>
+          <div className="flex-1 overflow-hidden p-4">
+            <div className="flex h-full" style={{gap: '8px'}}>
+              {/* 左侧股票列表 */}
+              <div style={{width: '420px', flexShrink: 0}} className="bg-white rounded-lg shadow-sm overflow-hidden">
+                <StockList
+                  stocks={stocks}
+                  selectedSymbol={selectedStock?.code || ''}
+                  onSelectStock={setSelectedStock}
+                  onAIResearch={handleAIResearch}
+                  analysisStatus={analysisStatus}
+                />
+              </div>
 
-            {/* K线及AI分析面板 */}
-            <div className="w-3/5 flex-1 bg-white rounded-lg shadow-sm overflow-hidden">
-              <StockDetail
-                stock={selectedStock}
-                aiTriggerKey={aiTriggerKey}
-                onAnalysisState={handleAnalysisStatusChange}
-              />
+              {/* K线及AI分析面板 */}
+              <div className="flex-1 bg-white rounded-lg shadow-sm overflow-hidden">
+                <StockDetail
+                  stock={selectedStock}
+                  aiTriggerKey={aiTriggerKey}
+                  onAnalysisState={handleAnalysisStatusChange}
+                />
+              </div>
             </div>
           </div>
         </Content>

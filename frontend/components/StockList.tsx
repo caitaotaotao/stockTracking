@@ -42,8 +42,6 @@ const StockList = ({
     const updateHeight = () => {
       if (containerRef.current) {
         const height = containerRef.current.clientHeight - 55;
-        console.log('updateHeight', height);
-        console.log('currentHeight', containerRef.current.clientHeight);
         if (height > 0) {
           setScrollY(height);
         }
@@ -145,6 +143,33 @@ const StockList = ({
           {value.toFixed(2)}
         </span>
       ),
+    },
+    {
+      title: '20日%',
+      dataIndex: 'change20d',
+      key: 'change20d',
+      align: 'right',
+      render: (value: number) => (
+        <span className="text-gray-600 font-medium whitespace-nowrap">
+          {value.toFixed(2)}
+        </span>
+      ),
+    },
+    {
+      title: '信号日',
+      dataIndex: 'tradeDate',
+      key: 'tradeDate',
+      align: 'right',
+      render: (value: string) => {
+        // 直接从字符串中提取月份和日期，避免时区问题
+        const [_, month, day] = value.split('-');
+        const formattedDate = `${month}.${day}`;
+        return (
+          <span className="text-gray-600 font-medium whitespace-nowrap">
+            {formattedDate}
+          </span>
+        );
+      },
     },
     {
       title: 'AI基本面',

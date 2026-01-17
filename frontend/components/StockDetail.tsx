@@ -4,7 +4,7 @@ import type { Stock, TimeFrame, KLineData } from '../src/types';
 import KLineChart from './KLineChart';
 import AIAnalysisSection from './AIAnalysisSection';
 import { fetchKLineData } from '../services/api';
-import { Spin } from 'antd';
+import { Spin, Typography } from 'antd';
 
 interface StockDetailProps {
   stock: Stock | null;
@@ -48,15 +48,22 @@ const StockDetail = ({ stock, aiTriggerKey, onAnalysisState }: StockDetailProps)
       </div>
     );
   }
+  const { Title } = Typography;
 
   return (
     <div className="flex-1 h-full overflow-y-auto bg-white p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center">
+          <Title level={4}>
             {stock.shortName}
-            <span className="ml-3 text-sm font-normal text-gray-400 bg-gray-100 px-2 py-1 rounded">{stock.code}</span>
-          </h1>
+            <span style={{marginLeft: '4px'}}>
+              <Typography.Text className="text-xs text-gray-400">
+                {stock.code}
+              </Typography.Text>
+            </span>
+          </Title>
+          
+
           {stock.themes && stock.themes.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-2">
               {stock.themes.map((theme, i) => (

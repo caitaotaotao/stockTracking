@@ -1,5 +1,7 @@
 import { type ReactElement } from 'react';
 import type { FilterOption } from '../src/types';
+import { Space, Typography } from 'antd';
+
 
 type StrategyHeaderProps = {
   strategyName: string;
@@ -72,21 +74,22 @@ const StrategyHeader = ({
         );
     }
   };
+  const { Title } = Typography;
 
   return (
     <div className="bg-white border-b px-6 py-4 flex items-center justify-between shadow-sm">
-      <div className="flex items-center space-x-8">
-        <h2 className="text-lg font-bold text-gray-800">{strategyName}</h2>
-        <div className="flex items-center space-x-4">
+      <Space size={32} align="baseline">
+        <Space size={16} align="baseline">
+          <Title level={3}>{strategyName}</Title>
           {filterOptions.map((option, index) => (
-            <div key={index} className="flex items-center space-x-2">
+            <Space key={index} size={8} align="baseline">
               <span className="text-sm text-gray-500">{option.name}:</span>
               {renderFilterOption(option)}
-            </div>
+            </Space>
           ))}
-        </div>
-      </div>
-      
+        </Space>
+      </Space>
+
       <button 
         onClick={onOpenMonitor}
         className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors text-sm font-medium"
