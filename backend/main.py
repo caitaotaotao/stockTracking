@@ -6,10 +6,19 @@ from typing import List
 from strategy_management.routes import strategy_router
 from agents.multiagents import agents_router
 from fastapi.middleware.cors import CORSMiddleware
+from agents.multiagents import init_agent_db_pool
+from contextlib import asynccontextmanager
 import os
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup only
+    await init_agent_db_pool()
+    yield
+
 # 创建FastAPI应用
-app = FastAPI(title="每日选股复盘系统", description="提供策略和个股研究的管理功能")
+app = FastAPI(title="每日选股复盘系统", description="提供策略和个股研究的管理功能", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

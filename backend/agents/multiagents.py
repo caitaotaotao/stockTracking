@@ -472,7 +472,8 @@ async def multiagents_fundamental(
             yield f"data: {json.dumps({'node': '', 'state': 'done', 'data': {
                 "phase": "", "content": "", "annotation": {}, "model": "", "id": "", "index": index
             }}, ensure_ascii=False)}\n\n"
-            logger.info(f"持久化信息读取完毕, 共输出{index}条数据")
+            yield f"data: {json.dumps({'node': '', 'state': 'done', 'content': ''})}\n\n"
+            logger.info(f"持久化信息读取完毕, 共输出{index}条数据, 输出完成")
         else:
             logger.info(f"无持久化信息，查询参数：{stockCode}、{report_date}")
             logger.info("开始基本面、情绪面节点并行输出")

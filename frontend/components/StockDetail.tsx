@@ -4,15 +4,14 @@ import type { Stock, TimeFrame, KLineData } from '../src/types';
 import KLineChart from './KLineChart';
 import AIAnalysisSection from './AIAnalysisSection';
 import { fetchKLineData } from '../services/api';
-import { Spin, Typography } from 'antd';
+import { Spin, Typography, Segmented } from 'antd';
 
 interface StockDetailProps {
   stock: Stock | null;
-  aiTriggerKey: number;
-  onAnalysisState?: (status: 'idle' | 'analyzing' | 'completed' | 'error', stock: Stock) => void;  // 分析状态回调
+  reportDate: string;
 }
 
-const StockDetail = ({ stock, aiTriggerKey, onAnalysisState }: StockDetailProps) => {
+const StockDetail = ({ stock, reportDate }: StockDetailProps) => {
   const [timeframe, setTimeframe] = useState<TimeFrame>('day');
   const [klineData, setKlineData] = useState<KLineData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -74,20 +73,18 @@ const StockDetail = ({ stock, aiTriggerKey, onAnalysisState }: StockDetailProps)
             </div>
           )}
         </div>
-        <div className="flex bg-gray-100 p-1 rounded-lg">
-          {(['day', 'week', 'month', 'year'] as TimeFrame[]).map((tf) => (
-            <button
-              key={tf}
-              onClick={() => setTimeframe(tf)}
-              className={`px-4 py-1 text-xs font-medium rounded-md transition-all ${
-                timeframe === tf ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {tf === 'day' ? '日K' : tf === 'week' ? '周K' : tf === 'month' ? '月K' : '年K'}
-            </button>
-          ))}
+          <Segmented<TimeFrame>
+            className="bg-gray-100 p-1 rounded-lg"
+            value={timeframe}
+            onChange={(v) => setTimeframe(v as TimeFrame)}
+            options={[
+              { label: '日K', value: 'day' },
+              { label: '周K', value: 'week' },
+              { label: '月K', value: 'month' },
+              { label: '年K', value: 'year' },
+            ]}
+          />
         </div>
-      </div>
 
       <div className="border rounded-xl p-4 mb-6 shadow-sm relative">
         <Spin
@@ -100,7 +97,7 @@ const StockDetail = ({ stock, aiTriggerKey, onAnalysisState }: StockDetailProps)
         </Spin>
       </div>
 
-      <AIAnalysisSection stock={stock} triggerKey={aiTriggerKey} report_date='2025-09-30' onAnalysisState={onAnalysisState} />
+      <AIAnalysisSection stock={stock} report_date={reportDate}/>
     </div>
   );
 };

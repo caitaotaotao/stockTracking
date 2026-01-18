@@ -110,7 +110,7 @@ class StrategyService:
                             StockLatestIndicator.change_pct.label('change20d')
                             )
                         .join(signals_dates_sq, TechStrongSignals.trade_date == signals_dates_sq.c.trade_date)
-                        .join(StockLatestIndicator, TechStrongWatchlist.ticker == StockLatestIndicator.code)
+                        .join(StockLatestIndicator, TechStrongSignals.ticker == StockLatestIndicator.code)
                         .order_by(TechStrongSignals.trade_date.desc(), TechStrongSignals.score.desc())
                     )
                     r = pd.DataFrame(session.execute(r2).all())

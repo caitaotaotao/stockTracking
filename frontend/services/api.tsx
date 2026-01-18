@@ -110,7 +110,7 @@ export const fetchKLineData = async (
       close: item.close,
       high: item.high,
       low: item.low,
-      volume: item.volume,
+      vol: item.volume,
     }));
   } catch (error) {
     console.error('获取K线数据失败：', error);

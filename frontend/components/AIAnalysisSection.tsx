@@ -19,8 +19,6 @@ const { Text } = Typography;
 interface AIAnalysisSectionProps {
   stock: Stock | null;
   report_date: string;
-  triggerKey: number;
-  onAnalysisState?: (status: 'idle' | 'analyzing' | 'completed' | 'error', stock: Stock) => void;  // 分析状态回调
 }
 
 type Phase = "thinking" | "output" | "error";
@@ -76,7 +74,7 @@ const NODE_CONFIG = [
   }
 ];
 
-const AIAnalysisSection = ({ stock, report_date, triggerKey, onAnalysisState }: AIAnalysisSectionProps) => {
+const AIAnalysisSection = ({ stock, report_date }: AIAnalysisSectionProps) => {
   const [status, setStatus] = useState<'idle' | 'analyzing' | 'completed' | 'error'>('idle');
   const [nodes, setNodes] = useState<Record<string, NodeState>>(() =>
     NODE_CONFIG.reduce((acc, n) => {
@@ -110,13 +108,6 @@ const AIAnalysisSection = ({ stock, report_date, triggerKey, onAnalysisState }: 
       });
     }
   }, [status]);
-
-  // 更新个股分析状态回调
-  useEffect(() => {
-  if (status !== 'idle' && stock && onAnalysisState) {
-    onAnalysisState(status, stock);
-  }
-}, [status, stock, onAnalysisState]);
 
   // 页面滚动监听
   useEffect(() => {
@@ -206,10 +197,10 @@ const AIAnalysisSection = ({ stock, report_date, triggerKey, onAnalysisState }: 
       return acc;
     }, {} as Record<string, NodeState>));
     
-    // 调用真实的流式接口
+    // 调用流式接口
     const eventSource = FundamentalAgentAPI.streamAnalysis(
-      `请分析${stock.name}(${stock.symbol})的基本面情况`,
-      stock.symbol,
+      `请分析${stock.shortName}(${stock.code})的基本面情况`,
+      stock.code,
       report_date
     );
     
@@ -240,6 +231,9 @@ const AIAnalysisSection = ({ stock, report_date, triggerKey, onAnalysisState }: 
     });
 
   }, [stock, report_date, parseStreamData]);
+
+  // AI分析按钮触发器
+  const [triggerKey, setTriggerKey] = useState(0);
 
   useEffect(() => {
     if (triggerKey > 0) {
@@ -273,27 +267,69 @@ const AIAnalysisSection = ({ stock, report_date, triggerKey, onAnalysisState }: 
     }
   };
 
-  const getStateIcon = (state: NodeState['state']) => {
-    switch (state) {
-      case 'done':
-        return <CheckCircleOutlined style={{ color: '#52c41a' }} />;
-      case 'in_progress':
-        return <LoadingOutlined style={{ color: '#1890ff' }} />;
-      case 'error':
-        return <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />;
-      default:
-        return <ClockCircleOutlined style={{ color: '#d9d9d9' }} />;
-    }
-  };
-
-  const getStatusTag = () => {
+  // 替换原有的 getStatusTag 函数
+  const getStatusButton = () => {
     switch (status) {
       case 'analyzing':
-        return <Tag icon={<LoadingOutlined />} color="processing">分析中...</Tag>;
+        return (
+          <Button 
+            type="default" 
+            size="small" 
+            disabled
+            style={{ pointerEvents: 'none' }} // 禁用点击
+          >
+            <Space>
+              <LoadingOutlined />
+              <span>分析中...</span>
+            </Space>
+          </Button>
+        );
       case 'completed':
-        return <Tag icon={<CheckCircleOutlined />} color="success">分析完成</Tag>;
+        return (
+          <Button 
+            type="primary" 
+            size="small"
+            disabled
+            style={{ pointerEvents: 'none'}}
+          >
+            <Space>
+              <CheckCircleOutlined />
+              <span>分析完成</span>
+            </Space>
+          </Button>
+        );
+      case 'error':
+        return (
+          <Button 
+            type="default" 
+            size="small"
+            danger
+            onClick={() => {
+              // 错误状态下点击重新分析
+              setTriggerKey(prev => prev + 1);
+            }}
+          >
+            <Space>
+              <ExclamationCircleOutlined />
+              <span>分析失败，重试</span>
+            </Space>
+          </Button>
+        );
       default:
-        return <Tag icon={<ClockCircleOutlined />} color="default">待分析</Tag>;
+        return (
+          <Button 
+            type="primary" 
+            size="small"
+            onClick={() => {
+              // 空闲状态下点击开始分析
+              setTriggerKey(prev => prev + 1);
+            }}
+          >
+            <Space>
+              <span>开始基本面分析</span>
+            </Space>
+          </Button>
+        );
     }
   };
 
@@ -304,11 +340,10 @@ const AIAnalysisSection = ({ stock, report_date, triggerKey, onAnalysisState }: 
       <Card
         title={
           <Space>
-            <BulbOutlined style={{ fontSize: '20px' }} />
             <span>AI 基本面深度研究</span>
           </Space>
         }
-        extra={getStatusTag()}
+        extra={getStatusButton()}
         style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
       >
         {/* Anchor Navigation Buttons */}
@@ -335,9 +370,9 @@ const AIAnalysisSection = ({ stock, report_date, triggerKey, onAnalysisState }: 
               }}
             >
               {label}
-              <span style={{ marginLeft: '4px' }}>
+              {/* <span style={{ marginLeft: '4px' }}>
                 {getStateIcon(nodes[id]?.state)}
-              </span>
+              </span> */}
             </Button>
           ))}
         </div>
@@ -369,7 +404,7 @@ const AIAnalysisSection = ({ stock, report_date, triggerKey, onAnalysisState }: 
                       <Space>
                         {icon}
                         <Text strong>{label}</Text>
-                        {getStateIcon(node?.state)}
+                        {/* {getStateIcon(node?.state)} */}
                       </Space>
                     }
                     

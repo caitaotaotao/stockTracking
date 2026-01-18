@@ -1,8 +1,13 @@
 import { useEffect, useRef } from 'react';
-import { createChart, ColorType, CandlestickSeries,HistogramSeries } from 'lightweight-charts';
-import type { IChartApi, ISeriesApi, CandlestickData } from 'lightweight-charts';
+import {
+  createChart,
+  ColorType,
+  CandlestickSeries,
+  HistogramSeries,
+  type IChartApi,
+  type UTCTimestamp,
+} from 'lightweight-charts';
 import type { KLineData } from '../src/types';
-import type { HistogramData, Time } from 'lightweight-charts';
 
 interface KLineChartProps {
   data: KLineData[];
@@ -12,133 +17,142 @@ interface KLineChartProps {
 const KLineChart = ({ data, height = 350 }: KLineChartProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
-  const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
 
   useEffect(() => {
-    if (!containerRef.current || data.length === 0) return;
+    const el = containerRef.current;
+    if (!el || !data || data.length === 0) return;
 
-    if (!chartRef.current) {
-      const chart = createChart(containerRef.current, {
-        width: containerRef.current.clientWidth,
-        height: height,
-        layout: {
-          background: { type: ColorType.Solid, color: 'white' },
-          textColor: '#333',
-        },
-        grid: {
-          vertLines: { color: '#f0f0f0' },
-          horzLines: { color: '#f0f0f0' },
-        },
-        crosshair: {
-          mode: 0,
-          vertLine: {
-            width: 1,
-            color: '#758696',
-            style: 3,
-          },
-          horzLine: {
-            width: 1,
-            color: '#758696',
-            style: 3,
-          },
-        },
-        timeScale: {
-          borderColor: '#f0f0f0',
-          timeVisible: true,
-          secondsVisible: false,
-        },
-        rightPriceScale: {
-          borderColor: '#f0f0f0',
-        },
-        handleScroll: {
-          vertTouchDrag: false,
-        },
-      });
-
-      const candleSeries = chart.addSeries(CandlestickSeries, {
-        upColor: '#ef4444',
-        downColor: '#22c55e',
-        borderUpColor: '#ef4444',
-        borderDownColor: '#22c55e',
-        wickUpColor: '#ef4444',
-        wickDownColor: '#22c55e',
-      });
-
-      const formattedData = data.map(item => ({
-        time: new Date(item.tradeDate).getTime() / 1000,
-        open: item.open,
-        high: item.high,
-        low: item.low,
-        close: item.close,
-      })) as CandlestickData[];
-
-      candleSeries.setData(formattedData);
-
-      const volumeSeries = chart.addSeries(HistogramSeries, {
-        color: '#26a69a',
-        priceFormat: {
-          type: 'volume',
-        },
-        priceScaleId: '', // 使用独立的价格轴
-      });
-
-      chart.priceScale('').applyOptions({
-        scaleMargins: {
-          top: 0.8,
-          bottom: 0,
-        },
-      });
-
-
-      const volumeData: HistogramData<Time>[] = data.map(item => ({
-        time: Math.floor(new Date(item.tradeDate).getTime() / 1000) as Time,  // 要求为毫秒级时间戳
-        value: item.vol,
-        color: item.close > item.open ? '#ef4444' : '#22c55e',
-      }));
-
-      volumeSeries.setData(volumeData);
-
-      const handleResize = () => {
-        if (containerRef.current && chartRef.current) {
-          chartRef.current.applyOptions({ 
-            width: containerRef.current.clientWidth 
-          });
-        }
-      };
-
-      window.addEventListener('resize', handleResize);
-
-      chartRef.current = chart;
-      seriesRef.current = candleSeries;
-
-      chart.timeScale().fitContent();
-
-      return () => {
-        window.removeEventListener('resize', handleResize);
-      };
-    } else if (seriesRef.current) {
-      const formattedData = data.map(item => ({
-        time: new Date(item.tradeDate).getTime() / 1000,
-        open: item.open,
-        high: item.high,
-        low: item.low,
-        close: item.close,
-      })) as CandlestickData[];
-
-      seriesRef.current.setData(formattedData);
-      chartRef.current.timeScale().fitContent();
+    // 清理旧图表
+    if (chartRef.current) {
+      chartRef.current.remove();
+      chartRef.current = null;
     }
-  }, [data, height]);
 
-  useEffect(() => {
+    // 容器宽度（避免 0 宽导致异常）
+    const width = el.clientWidth || el.getBoundingClientRect().width || 0;
+    if (width <= 0) return;
+
+    // 创建图表
+    const chart = createChart(el, {
+      width,
+      height,
+      layout: {
+        background: { type: ColorType.Solid, color: 'white' },
+        textColor: '#333',
+      },
+      grid: {
+        vertLines: { color: '#f0f0f0' },
+        horzLines: { color: '#f0f0f0' },
+      },
+      timeScale: {
+        borderColor: '#f0f0f0',
+        timeVisible: true,
+        secondsVisible: false,
+      },
+      rightPriceScale: {
+        borderColor: '#f0f0f0',
+      },
+    });
+
+    // v5：使用 addSeries(SeriesDefinition, options)
+    const candleSeries = chart.addSeries(CandlestickSeries, {
+      upColor: '#ef4444',
+      downColor: '#22c55e',
+      borderUpColor: '#ef4444',
+      borderDownColor: '#22c55e',
+      wickUpColor: '#ef4444',
+      wickDownColor: '#22c55e',
+    });
+
+    // tradeDate 为毫秒时间戳：转为秒（UTCTimestamp）
+    const candleData = data
+      .map(item => {
+        const t = Math.floor(Number((item as any).tradeDate) / 1000) as UTCTimestamp;
+        const open = Number((item as any).open);
+        const high = Number((item as any).high);
+        const low = Number((item as any).low);
+        const close = Number((item as any).close);
+
+        return { time: t, open, high, low, close };
+      })
+      .filter(d =>
+        Number.isFinite(d.time) &&
+        Number.isFinite(d.open) &&
+        Number.isFinite(d.high) &&
+        Number.isFinite(d.low) &&
+        Number.isFinite(d.close)
+      )
+      .sort((a, b) => a.time - b.time);
+
+    candleSeries.setData(candleData);
+
+    // 成交量（Histogram）
+    const volumeSeries = chart.addSeries(HistogramSeries, {
+      color: '#26a69a',
+      priceFormat: { type: 'volume' },
+      priceScaleId: '',
+    });
+
+    // 单独的成交量轴（使用空字符串 id）
+    chart.priceScale('').applyOptions({
+      scaleMargins: {
+        top: 0.8,
+        bottom: 0,
+      },
+    });
+
+    const volumeData = data
+      .map(item => {
+        const t = Math.floor(Number((item as any).tradeDate) / 1000) as UTCTimestamp;
+        const open = Number((item as any).open);
+        const close = Number((item as any).close);
+        const vol = Number((item as any).vol);
+
+        return {
+          time: t,
+          value: vol,
+          color: close >= open ? '#ef444480' : '#22c55e80',
+        };
+      })
+      .filter(d => Number.isFinite(d.time) && Number.isFinite(d.value))
+      .sort((a, b) => a.time - b.time);
+
+    volumeSeries.setData(volumeData);
+
+    // 自适应宽度：window resize + ResizeObserver
+    const handleResize = () => {
+      const node = containerRef.current;
+      if (!node || !chartRef.current) return;
+
+      const nextWidth = node.clientWidth || node.getBoundingClientRect().width || 0;
+      if (nextWidth > 0) {
+        chartRef.current.applyOptions({ width: nextWidth });
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined' && containerRef.current) {
+      resizeObserver = new ResizeObserver(() => handleResize());
+      resizeObserver.observe(containerRef.current);
+    }
+
+    chartRef.current = chart;
+
+    // 视图适配
+    chart.timeScale().fitContent();
+
     return () => {
+      window.removeEventListener('resize', handleResize);
+      if (resizeObserver) resizeObserver.disconnect();
+
       if (chartRef.current) {
         chartRef.current.remove();
         chartRef.current = null;
-        seriesRef.current = null;
       }
     };
-  }, []);
+  }, [data, height]);
 
   return <div ref={containerRef} className="w-full" style={{ height }} />;
 };

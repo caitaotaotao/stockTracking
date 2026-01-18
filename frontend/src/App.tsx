@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Sidebar from '../components/Sidebar';
 import StrategyHeader from '../components/StrategyHeader';
 import StockList from '../components/StockList';
@@ -14,9 +14,7 @@ const App = () => {
   const [selectedStrategyId, setSelectedStrategyId] = useState<number>(defaultStrategyId);
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
-  const [isMonitorOpen, setIsMonitorOpen] = useState(false);
-  const [aiTriggerKey, setAiTriggerKey] = useState(0);
-  const [analysisStatus, setAnalysisStatus] = useState<Record<string, 'idle' | 'analyzing' | 'completed' | 'error'>>({});
+  const [isMonitorOpen, setIsMonitorOpen] = useState(false);  // 判断显示策略弹窗
   const [filterOptions, setFilterOptions] = useState<FilterOption[]>([]);
   const [filterValues, setFilterValues] = useState<Record<string, any>>({});
   const { Content } = Layout;
@@ -36,101 +34,56 @@ const App = () => {
 
   // 初始化筛选项
   useEffect(() => {
-  if (!loading && strategies.length > 0 && defaultStrategyId !== undefined) {
-    const defaultStrategy = strategies[defaultStrategyId];
-    if (defaultStrategy && defaultStrategy.filterOptions) {
-      setFilterOptions(defaultStrategy.filterOptions);
-      
-      // 同时设置默认策略对应默认筛选值
-      const defaultValues: Record<string, any> = {};
-      defaultStrategy.filterOptions.forEach(option => {
-        if (option.defaultValue !== undefined) {
-          defaultValues[option.filterCode] = option.defaultValue;
-        } else if (option.type === 'multiSelect') {
-          defaultValues[option.filterCode] = [];
-        } else {
-          defaultValues[option.filterCode] = '';
-        }
-      });
-      setFilterValues(defaultValues);
-    } else {
-      setFilterOptions([]);
-      setFilterValues({});
+    if (!loading && strategies.length > 0 && defaultStrategyId !== undefined) {
+      const defaultStrategy = strategies[defaultStrategyId];
+      if (defaultStrategy && defaultStrategy.filterOptions) {
+        setFilterOptions(defaultStrategy.filterOptions);
+        
+        // 同时设置默认策略对应默认筛选值
+        const defaultValues: Record<string, any> = {};
+        defaultStrategy.filterOptions.forEach(option => {
+          if (option.defaultValue !== undefined) {
+            defaultValues[option.filterCode] = option.defaultValue;
+          } else if (option.type === 'multiSelect') {
+            defaultValues[option.filterCode] = [];
+          } else {
+            defaultValues[option.filterCode] = '';
+          }
+        });
+        setFilterValues(defaultValues);
+      } else {
+        setFilterOptions([]);
+        setFilterValues({});
+      }
     }
-  }
-}, [loading, strategies, defaultStrategyId]);
+  }, [loading, strategies, defaultStrategyId]);
 
-// 初始化股票列表
-useEffect(() => {
-  if (!loading && defaultStrategyId !== undefined) {
-    const defaultStrategy = strategies[defaultStrategyId];
-    if (defaultStrategy && defaultStrategy.stockGroups) {
-      setStocks(defaultStrategy.stockGroups);
-      if (defaultStrategy.stockGroups.length > 0) setSelectedStock(defaultStrategy.stockGroups[0]);
-    } else {
-      setStocks([]);
+  // 初始化股票列表
+  useEffect(() => {
+    if (!loading && defaultStrategyId !== undefined) {
+      const defaultStrategy = strategies[defaultStrategyId];
+      if (defaultStrategy && defaultStrategy.stockGroups) {
+        setStocks(defaultStrategy.stockGroups);
+        if (defaultStrategy.stockGroups.length > 0) setSelectedStock(defaultStrategy.stockGroups[0]);
+      } else {
+        setStocks([]);
+      }
     }
-  }
-}, [loading, defaultStrategyId, strategies]);  
+  }, [loading, defaultStrategyId, strategies]);  
 
-
-  // 股票AI分析状态记录
-  const handleAIResearch = (stock: Stock) => {
-    setSelectedStock(stock);
-    setAnalysisStatus(prev => ({
-      ...prev,
-      [stock.code]: 'analyzing'
-    }));
-    setAiTriggerKey(prev => prev + 1);
-  };
-
-  const handleAnalysisStatusChange = (status: 'idle' | 'analyzing' | 'completed' | 'error', stock: Stock) => {
-    setAnalysisStatus(prev => ({
-      ...prev,
-      [stock.code]: status
-    }));
-  };
-
-  // 处理筛选值变更
-  const handleFilterChange = (name: string, value: any) => {
+  const handleFilterChange = useCallback((name: string, value: any) => {
     setFilterValues(prev => ({
       ...prev,
       [name]: value
     }));
-  };
+  }, []);
 
-  // 根据筛选条件获取股票列表
-  useEffect(() => {
-    if (selectedStrategyId) {
-      // 从筛选值中提取参数
-      const params: any = {
-        strategyId: Number(selectedStrategyId)
-      };
-      // 只添加非空的筛选参数
-      Object.entries(filterValues).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== '') {
-          params[key] = value;
-        }
-      });
-
-      fetchStocksByStrategy(params).then((data: Stock[]) => {
-        // 直接使用返回的数组数据
-        setStocks(data);
-        if (data.length > 0) setSelectedStock(data[0]);
-      }).catch(error => {
-        console.error('Failed to fetch stocks:', error);
-        setStocks([]);
-      });
-    }
-  }, [filterValues]);
-
-
-  // 选中策略变化，获取股票列表和初始化筛选值
+  // 合并这两个 useEffect，避免循环
   useEffect(() => {
     if (selectedStrategyId) {
       const selectedStrategy = strategies.find(s => s.strategyId === selectedStrategyId);
       if (selectedStrategy) {
-        setStocks(selectedStrategy.stockGroups);
+        // 先设置筛选选项和默认值
         setFilterOptions(selectedStrategy.filterOptions);
         const selectedDefaultValues: Record<string, any> = {};
         selectedStrategy.filterOptions.forEach(option => {
@@ -143,18 +96,65 @@ useEffect(() => {
           }
         });
         setFilterValues(selectedDefaultValues);
+        
+        // 然后获取股票列表（使用默认筛选值）
+        const params: any = {
+          strategyId: Number(selectedStrategyId)
+        };
+        Object.entries(selectedDefaultValues).forEach(([key, value]) => {
+          if (value !== undefined && value !== null && value !== '') {
+            params[key] = value;
+          }
+        });
+
+        fetchStocksByStrategy(params).then((data: Stock[]) => {
+          setStocks(data);
+          if (data.length > 0) setSelectedStock(data[0]);
+        }).catch(error => {
+          console.error('Failed to fetch stocks:', error);
+          setStocks([]);
+        });
       } else {
         setStocks([]);
         setFilterOptions([]);
         setFilterValues({});
       }
     }
-  }, [selectedStrategyId])
+  }, [selectedStrategyId, strategies]);
+
+  // 只在 filterValues 变化时获取股票（但要排除初始化的情况）
+  const isInitialMount = useRef(true);
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    
+    if (selectedStrategyId) {
+      const params: any = {
+        strategyId: Number(selectedStrategyId)
+      };
+      Object.entries(filterValues).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          params[key] = value;
+        }
+      });
+
+      fetchStocksByStrategy(params).then((data: Stock[]) => {
+        setStocks(data);
+        if (data.length > 0) setSelectedStock(data[0]);
+      }).catch(error => {
+        console.error('Failed to fetch stocks:', error);
+        setStocks([]);
+      });
+    }
+  }, [filterValues, selectedStrategyId]);
 
   const selectedStrategy = strategies.find(s => s.strategyId === selectedStrategyId);
 
+
   return (
-    <Layout className="h-screen overflow-hidden">
+    <Layout className="h-screen overflow-hidden" style={{ marginLeft: '8px' }}>
       {/* 策略面板 */}
       <Sidebar
         strategies={strategies}
@@ -185,8 +185,6 @@ useEffect(() => {
                   stocks={stocks}
                   selectedSymbol={selectedStock?.code || ''}
                   onSelectStock={setSelectedStock}
-                  onAIResearch={handleAIResearch}
-                  analysisStatus={analysisStatus}
                 />
               </div>
 
@@ -194,8 +192,7 @@ useEffect(() => {
               <div className="flex-1 bg-white rounded-lg shadow-sm overflow-hidden">
                 <StockDetail
                   stock={selectedStock}
-                  aiTriggerKey={aiTriggerKey}
-                  onAnalysisState={handleAnalysisStatusChange}
+                  reportDate={filterValues.reportDate?? new Date().toISOString().slice(0,10)}
                 />
               </div>
             </div>

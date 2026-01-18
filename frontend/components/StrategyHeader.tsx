@@ -35,7 +35,7 @@ const StrategyHeader = ({
         return (
           <select 
             className="bg-gray-50 border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            value={option.defaultValue || ''}
+            value={filterValues[option.filterCode] ?? option.defaultValue ?? ''}
             onChange={(e) => handleFilterChange(option.filterCode, e.target.value)}
           >
             {option.options?.map(opt => (
@@ -47,7 +47,7 @@ const StrategyHeader = ({
         return (
           <div className="flex flex-col bg-gray-50 border border-gray-200 rounded p-2 max-h-32 overflow-y-auto">
             {option.options?.map(opt => {
-              const values = Array.isArray(filterValues[option.defaultValue]) ? filterValues[option.defaultValue] : [];
+              const values = Array.isArray(filterValues[option.defaultValue]) ? filterValues[option.filterCode] : [];
               const isChecked = values.includes(opt.value);
               return (
                 <label key={opt.value} className="flex items-center space-x-2 text-sm py-1">
@@ -67,7 +67,7 @@ const StrategyHeader = ({
         return (
           <input 
             type="number" 
-            value={option.defaultValue ?? ''}
+            value={filterValues[option.filterCode] ?? option.defaultValue ?? ''}
             onChange={(e) => handleFilterChange(option.filterCode, Number(e.target.value))}
             className="w-16 bg-gray-50 border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
